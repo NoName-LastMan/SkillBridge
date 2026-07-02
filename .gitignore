@@ -1,0 +1,14 @@
+# Root folder ignores
+.DS_Store
+.idea/
+.vscode/
+
+# Ignore backend build files (kalau pakai Maven)
+backend/target/
+backend/*.iml
+backend/.mvn/
+
+# Ignore frontend build files & node_modules
+frontend/node_modules/
+frontend/dist/
+frontend/.env
