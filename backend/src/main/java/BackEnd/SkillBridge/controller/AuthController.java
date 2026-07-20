@@ -4,7 +4,9 @@ import BackEnd.SkillBridge.dto.request.LoginRequest;
 import BackEnd.SkillBridge.dto.request.RegisterRequest;
 import BackEnd.SkillBridge.dto.response.JwtResponse;
 import BackEnd.SkillBridge.dto.response.MessageResponse;
+import BackEnd.SkillBridge.entity.Profile;
 import BackEnd.SkillBridge.entity.User;
+import BackEnd.SkillBridge.repository.ProfileRepository;
 import BackEnd.SkillBridge.repository.UserRepository;
 import BackEnd.SkillBridge.security.jwt.JwtUtils;
 import jakarta.validation.Valid;
@@ -27,6 +29,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
 
     @Autowired
     private PasswordEncoder encoder;
@@ -77,10 +82,16 @@ public class AuthController {
                 .email(registerRequest.getEmail())
                 .password(encoder.encode(registerRequest.getPassword()))
                 .role(registerRequest.getRole())
-                .isVerified(true) // Set true by default; change to false if email verification needed
+                .isVerified(true)
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        // Auto-create profile kosong untuk UX yang lebih baik
+        Profile profile = Profile.builder()
+                .user(savedUser)
+                .build();
+        profileRepository.save(profile);
 
         return ResponseEntity.ok(new MessageResponse("User berhasil didaftarkan!"));
     }
