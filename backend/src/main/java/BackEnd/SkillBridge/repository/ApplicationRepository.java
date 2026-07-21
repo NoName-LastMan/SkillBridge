@@ -25,4 +25,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     // Ambil lamaran spesifik dari satu user ke satu proyek
     Optional<Application> findByProjectIdAndApplicantId(Long projectId, Long applicantId);
+
+    // ── Admin: count by status ────────────────────────────────────────────
+    long countByStatus(ApplicationStatus status);
 }

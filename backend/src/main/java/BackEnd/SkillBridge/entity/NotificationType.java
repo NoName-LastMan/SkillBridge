@@ -13,5 +13,10 @@ public enum NotificationType {
     CONTACT_AUTO_APPROVED,     // Kontak otomatis dibuka setelah lamaran diterima
 
     // ── Pesan ──────────────────────────────────────────────────────────────
-    NEW_MESSAGE                // User menerima pesan baru
+    NEW_MESSAGE,               // User menerima pesan baru
+
+    // ── Admin ──────────────────────────────────────────────────────────────
+    ACCOUNT_VERIFIED,          // Akun mahasiswa diverifikasi oleh admin
+    ACCOUNT_UNVERIFIED,        // Akun mahasiswa dibatalkan verifikasinya oleh admin
+    PROJECT_MODERATED          // Proyek dihapus/dimoderasi oleh admin
 }

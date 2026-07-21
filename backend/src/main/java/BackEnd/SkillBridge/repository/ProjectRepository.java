@@ -32,4 +32,17 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // Cek apakah user adalah pemilik proyek
     boolean existsByIdAndCreatedById(Long projectId, Long userId);
+
+    // ── Admin: count by status ────────────────────────────────────────────
+    long countByStatus(ProjectStatus status);
+
+    // ── Admin: search all projects (no status filter) ─────────────────────
+    @Query("SELECT p FROM Project p WHERE " +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY p.createdAt DESC")
+    List<Project> adminSearchByKeyword(@Param("keyword") String keyword);
+
+    // ── Admin: semua proyek diurutkan by createdAt desc ──────────────────
+    List<Project> findAllByOrderByCreatedAtDesc();
 }
