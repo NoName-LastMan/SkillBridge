@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class SkillBridgeApplication {
-salman
 	public static void main(String[] args) {
 		SpringApplication.run(SkillBridgeApplication.class, args);
 	}
