@@ -3,8 +3,6 @@ package BackEnd.SkillBridge.entity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "profiles")
@@ -48,9 +46,6 @@ public class Profile {
     @Enumerated(EnumType.STRING)
     @Column(name = "contact_privacy", nullable = false)
     private ContactPrivacy contactPrivacy = ContactPrivacy.PUBLIC;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserSkill> userSkills = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -104,7 +99,6 @@ public class Profile {
     public String getInstagram()         { return instagram; }
     public String getLinkedin()          { return linkedin; }
     public ContactPrivacy getContactPrivacy() { return contactPrivacy; }
-    public List<UserSkill> getUserSkills()    { return userSkills; }
     public LocalDateTime getCreatedAt()   { return createdAt; }
     public LocalDateTime getUpdatedAt()   { return updatedAt; }
 

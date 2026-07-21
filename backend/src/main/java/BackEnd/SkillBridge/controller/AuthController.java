@@ -3,7 +3,6 @@ package BackEnd.SkillBridge.controller;
 import BackEnd.SkillBridge.dto.request.LoginRequest;
 import BackEnd.SkillBridge.dto.request.RegisterRequest;
 import BackEnd.SkillBridge.dto.response.JwtResponse;
-import BackEnd.SkillBridge.dto.response.MessageResponse;
 import BackEnd.SkillBridge.entity.Profile;
 import BackEnd.SkillBridge.entity.User;
 import BackEnd.SkillBridge.repository.ProfileRepository;
@@ -18,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -74,7 +75,7 @@ public class AuthController {
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: Email sudah terdaftar!"));
+                    .body(Map.of("message", "Error: Email sudah terdaftar!"));
         }
 
         // Create new user account
@@ -93,6 +94,6 @@ public class AuthController {
                 .build();
         profileRepository.save(profile);
 
-        return ResponseEntity.ok(new MessageResponse("User berhasil didaftarkan!"));
+        return ResponseEntity.ok(Map.of("message", "User berhasil didaftarkan!"));
     }
 }
