@@ -1,386 +1,360 @@
-Dokumentasi REST API - SkillBridge 🚀
+# Dokumentasi REST API SkillBridge
 
-Platform Kolaborasi dan Pertukaran Skill Mahasiswa UNIMUS
+Dokumentasi ini dibuat berdasarkan endpoint yang aktif pada backend Spring Boot saat ini.
 
-Dokumentasi API ini berfungsi sebagai kontrak jembatan antara tim Backend (Spring Boot) dan tim Frontend (React JS). Semua komunikasi data menggunakan format JSON dengan base URL yang disepakati di bawah ini.
+## Informasi Umum
 
-📌 Informasi Umum
+- **Base URL lokal:** `http://localhost:8080/api`
+- **Format data:** `application/json`
+- **Autentikasi:** endpoint selain `/auth/**` memerlukan header berikut.
 
-Base URL Lokal: http://localhost:8080/api
+```http
+Authorization: Bearer <token>
+```
 
-Base URL Production: https://api.skillbridge.unimus.ac.id/api (contoh)
+- **Catatan respons:** backend mengembalikan DTO atau array DTO secara langsung, bukan pembungkus `success`, `message`, dan `data`.
+- **Kode status umum:** `200 OK` (berhasil), `201 Created` (resource dibuat), `204 No Content` (berhasil tanpa body), `400 Bad Request` (validasi/aturan bisnis), `401 Unauthorized` (token tidak ada/tidak valid), dan `403 Forbidden` (hak akses tidak cukup).
 
-Format Data: JSON (Content-Type: application/json)
+## Nilai Enum
 
-Autentikasi: Bearer Token JWT (dimasukkan dalam Header Authorization: Bearer <token>)
+| Nama | Nilai yang didukung |
+| --- | --- |
+| `role` | `ADMIN`, `MAHASISWA` |
+| `level` | `BEGINNER`, `INTERMEDIATE`, `ADVANCED` |
+| `contactPrivacy` | `PUBLIC`, `PRIVATE` |
+| `category` | `PKM`, `LOMBA`, `STARTUP`, `PENELITIAN`, `MAGANG`, `OPEN_SOURCE`, `LAINNYA` |
+| `status` proyek | `OPEN`, `CLOSED`, `COMPLETED` |
+| `status` lamaran | `PENDING`, `ACCEPTED`, `REJECTED` |
+| `status` permintaan kontak | `PENDING`, `APPROVED`, `REJECTED` |
 
-Standard Response Format
+## 1. Autentikasi
 
-🟢 Response Sukses
+### `POST /auth/register`
 
-{
-  "success": true,
-  "message": "Pesan status operasi berhasil",
-  "data": {} // Bisa berupa objek {} atau array []
-}
+Mendaftarkan akun dan otomatis membuat profil kosong. Tidak memerlukan token.
 
-
-🔴 Response Error
-
-{
-  "success": false,
-  "message": "Penjelasan detail kenapa error terjadi",
-  "errors": null // Opsional, bisa berisi list error validasi form
-}
-
-
-1. Autentikasi & Akun (/auth)
-
-1.1 Register Mahasiswa Baru
-
-Menggunakan email kampus berakhiran @student.unimus.ac.id.
-
-Endpoint: POST /auth/register
-
-Autentikasi: No (Public)
-
-Request Body:
-
+```json
 {
   "email": "salman@student.unimus.ac.id",
   "password": "password123",
-  "role": "mahasiswa"
+  "role": "MAHASISWA"
 }
+```
 
+Validasi: `email` harus valid, `password` minimal 6 karakter, dan `role` wajib diisi.
 
-Response Sukses (201 Created):
+**Respons `200 OK`**
 
+```json
 {
-  "success": true,
-  "message": "Registrasi berhasil. Silakan tunggu verifikasi admin kampus.",
-  "data": {
-    "id": 1,
-    "email": "salman@student.unimus.ac.id",
-    "role": "mahasiswa",
-    "is_verified": false,
-    "created_at": "2026-07-04T11:30:00"
-  }
+  "message": "User berhasil didaftarkan!"
 }
+```
 
+Jika email telah digunakan, respons `400 Bad Request` berisi pesan `Error: Email sudah terdaftar!`.
 
-1.2 Login Akun
+### `POST /auth/login`
 
-Endpoint: POST /auth/login
+Masuk menggunakan email dan password. Tidak memerlukan token.
 
-Autentikasi: No (Public)
-
-Request Body:
-
+```json
 {
   "email": "salman@student.unimus.ac.id",
   "password": "password123"
 }
+```
 
+**Respons `200 OK`**
 
-Response Sukses (200 OK):
-
+```json
 {
-  "success": true,
-  "message": "Login berhasil",
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": 1,
-      "email": "salman@student.unimus.ac.id",
-      "role": "mahasiswa",
-      "is_verified": true
-    }
-  }
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "type": "Bearer",
+  "id": 1,
+  "email": "salman@student.unimus.ac.id",
+  "role": "MAHASISWA"
 }
+```
 
+## 2. Profil dan Skill Saya
 
-2. Profil Mahasiswa (/profiles)
+Semua endpoint pada bagian ini memerlukan Bearer token.
 
-2.1 Buat / Update Profil Skill (Langkah 2 dari 3)
+### `GET /profile/me`
 
-Endpoint: PUT /profiles/me
+Mengambil profil lengkap pengguna yang sedang login, termasuk kontak dan daftar skill.
 
-Autentikasi: Yes (Bearer Token)
+**Respons `200 OK`:** objek profil dengan `id`, `userId`, `email`, `namaLengkap`, `nim`, `prodi`, `angkatan`, `bio`, `fotoUrl`, `whatsapp`, `instagram`, `linkedin`, `contactPrivacy`, dan `skills`.
 
-Request Body:
+### `PUT /profile/me`
 
+Memperbarui biodata dan kontak. Semua field opsional; batas `nim` 20 karakter, `prodi` 100, dan `angkatan` 10.
+
+```json
 {
-  "nama_lengkap": "M. Salman Alfarizi",
+  "namaLengkap": "M. Salman Alfarizi",
   "nim": "H2A022001",
   "prodi": "Informatika",
-  "bio": "Suka riset backend development dan optimasi database.",
-  "skills": ["Spring Boot", "PostgreSQL", "React", "Docker"],
-  "minat": ["PKM", "Startup", "Kompetisi"],
-  "sedang_mencari": ["Anggota Tim PKM", "Teman Belajar"],
-  "no_telepon": "08123456789",
+  "angkatan": "2022",
+  "bio": "Backend developer dan anggota tim PKM.",
+  "fotoUrl": "https://example.com/foto.jpg",
+  "whatsapp": "08123456789",
   "instagram": "salman_alfarizi",
-  "phone_privacy": "PRIVATE", // Nilai: PUBLIC / PRIVATE
-  "ig_privacy": "PUBLIC"
+  "linkedin": "https://linkedin.com/in/salman"
 }
+```
 
+**Respons `200 OK`:** objek profil lengkap seperti `GET /profile/me`.
 
-Response Sukses (200 OK):
+### `PUT /profile/me/privacy`
 
+Mengatur visibilitas seluruh kontak profil.
+
+```json
 {
-  "success": true,
-  "message": "Profil berhasil diperbarui",
-  "data": {
+  "contactPrivacy": "PRIVATE"
+}
+```
+
+**Respons `200 OK`:** objek profil lengkap dengan nilai `contactPrivacy` terbaru.
+
+### `GET /profile/me/skills`
+
+Mengambil daftar skill milik pengguna.
+
+**Respons `200 OK`**
+
+```json
+[
+  {
+    "skillId": 1,
+    "skillName": "Spring Boot",
+    "skillCategory": "Backend",
+    "level": "INTERMEDIATE"
+  }
+]
+```
+
+### `POST /profile/me/skills`
+
+Menambahkan skill dari master skill ke profil pengguna.
+
+```json
+{
+  "skillId": 1,
+  "level": "INTERMEDIATE"
+}
+```
+
+**Respons `200 OK`:** satu objek skill dengan field yang sama seperti item pada `GET /profile/me/skills`.
+
+### `DELETE /profile/me/skills/{skillId}`
+
+Menghapus skill dari profil pengguna.
+
+**Respons `204 No Content`** tanpa body.
+
+### `GET /profile/{userId}`
+
+Melihat profil pengguna lain. Bila kontak target `PRIVATE` dan belum disetujui, nilai `whatsapp`, `instagram`, dan `linkedin` bernilai `null`.
+
+**Respons `200 OK`**
+
+```json
+{
+  "userId": 12,
+  "namaLengkap": "Rina Putri",
+  "nim": "H2A022010",
+  "prodi": "Informatika",
+  "angkatan": "2022",
+  "bio": "UI/UX designer.",
+  "fotoUrl": null,
+  "whatsapp": null,
+  "instagram": null,
+  "linkedin": null,
+  "contactPrivacy": "PRIVATE",
+  "contactVisible": false,
+  "myRequestStatus": "PENDING",
+  "skills": []
+}
+```
+
+## 3. Master Skill
+
+### `GET /skills`
+
+Mengambil semua skill pada master. Memerlukan Bearer token.
+
+### `GET /skills/search?q={keyword}`
+
+Mencari skill berdasarkan nama. Parameter `q` wajib diisi. Memerlukan Bearer token.
+
+Kedua endpoint mengembalikan `200 OK` berupa array berikut:
+
+```json
+[
+  {
     "id": 1,
-    "nama_lengkap": "M. Salman Alfarizi",
-    "nim": "H2A022001",
-    "prodi": "Informatika",
-    "bio": "Suka riset backend development dan optimasi database.",
-    "skills": ["Spring Boot", "PostgreSQL", "React"],
-    "minat": ["PKM", "Startup"],
-    "sedang_mencari": ["Anggota Tim PKM"],
-    "no_telepon": "08123456789",
-    "instagram": "salman_alfarizi",
-    "phone_privacy": "PRIVATE",
-    "ig_privacy": "PUBLIC"
+    "name": "Spring Boot",
+    "category": "Backend"
   }
-}
+]
+```
 
+### `POST /skills`
 
-2.2 Dapatkan Profil Pribadi (Untuk Dashboard)
+Membuat skill master. Memerlukan Bearer token dengan role `ADMIN`.
 
-Endpoint: GET /profiles/me
-
-Autentikasi: Yes (Bearer Token)
-
-Response Sukses (200 OK):
-
+```json
 {
-  "success": true,
-  "message": "Profil ditemukan",
-  "data": {
-    "id": 1,
-    "nama_lengkap": "M. Salman Alfarizi",
-    "nim": "H2A022001",
-    "prodi": "Informatika",
-    "bio": "Suka riset backend development dan optimasi database.",
-    "skills": ["Spring Boot", "React"],
-    "is_verified": true
-  }
+  "name": "Spring Boot",
+  "category": "Backend"
 }
+```
 
+`name` wajib diisi dan maksimal 100 karakter; `category` maksimal 100 karakter. Respons `200 OK` mengembalikan objek skill yang dibuat.
 
-2.3 Pencarian & Matching Kolaborator (Algoritma Pencocokan)
+## 4. Proyek dan Rekrutmen
 
-Mengembalikan calon kolaborator terdekat berdasarkan kesamaan minat, skill, dan prodi.
+Semua endpoint pada bagian ini memerlukan Bearer token.
 
-Endpoint: GET /profiles
+### Struktur respons proyek
 
-Query Params:
+Endpoint proyek mengembalikan objek dengan field `id`, `title`, `description`, `category`, `status`, `maxMembers`, `requiredSkills`, `createdById`, `createdByEmail`, `createdByName`, `memberCount`, `pendingApplicationCount`, `hasApplied`, `isOwner`, `createdAt`, dan `updatedAt`.
 
-search: (String) untuk pencarian nama/skill/prodi secara manual.
+### `POST /projects`
 
-sort: matching_score (default tertinggi) atau latest.
+Membuat proyek baru; pembuat otomatis menjadi ketua tim.
 
-Autentikasi: Yes (Bearer Token)
-
-Request URL Contoh: GET /api/profiles?search=React&sort=matching_score
-
-Response Sukses (200 OK):
-
+```json
 {
-  "success": true,
-  "message": "Berhasil mendapatkan rekomendasi kolaborator",
-  "data": [
-    {
-      "user_id": 12,
-      "nama_lengkap": "Rina Putri",
-      "prodi": "Akuntansi",
-      "angkatan": "2022",
-      "bio": "Mahasiswi akuntansi yang passionate di bidang bisnis dan startup.",
-      "skills": ["Analisis Keuangan", "Penyusunan Anggaran", "Riset Pasar"],
-      "sedang_mencari": ["Programmer untuk Tim", "Anggota Tim PKM"],
-      "matching_score": 95,
-      "status_hubungan": "BELUM_TERHUBUNG" // BELUM_TERHUBUNG, PENDING, TERHUBUNG
-    },
-    {
-      "user_id": 15,
-      "nama_lengkap": "Bima Satrio",
-      "prodi": "Sistem Informasi",
-      "angkatan": "2021",
-      "bio": "Suka riset dan data science.",
-      "skills": ["Python", "Machine Learning", "Analisis Data"],
-      "sedang_mencari": ["Anggota Tim PKM", "Teman Belajar"],
-      "matching_score": 88,
-      "status_hubungan": "PENDING"
-    }
-  ]
+  "title": "Sistem Monitoring Kesehatan",
+  "description": "Mencari anggota untuk pengembangan IoT.",
+  "category": "PKM",
+  "maxMembers": 5,
+  "requiredSkills": "Arduino, IoT, Flutter"
 }
+```
 
+`title`, `category`, dan `maxMembers` wajib diisi. Respons: `201 Created` dengan objek proyek.
 
-3. Manajemen Proyek & Tim (/projects)
+### `GET /projects`
 
-3.1 Buat Lowongan Proyek Baru (Ketua Tim)
+Mengambil proyek berstatus `OPEN`. Gunakan query opsional `?q=keyword` untuk pencarian. Respons `200 OK` berupa array objek proyek.
 
-Endpoint: POST /projects
+### `GET /projects/my`
 
-Autentikasi: Yes (Bearer Token)
+Mengambil semua proyek yang dibuat pengguna sebagai ketua tim. Respons `200 OK` berupa array objek proyek.
 
-Request Body:
+### `GET /projects/{id}`
 
+Mengambil detail satu proyek. Respons `200 OK` berupa objek proyek.
+
+### `PUT /projects/{id}`
+
+Memperbarui proyek; hanya ketua tim. Semua field opsional, tetapi jika dikirim `maxMembers` minimal bernilai 1.
+
+```json
 {
-  "judul_proyek": "Sistem Monitoring Kesehatan PKM-KC",
-  "deskripsi": "Kami mencari developer Internet of Things (IoT) dan mobile app designer untuk ikut serta PKM tahun ini.",
-  "kategori": "PKM", // Nilai: PKM, LOMBA, BELAJAR, STARTUP
-  "skills_dibutuhkan": ["Arduino", "IoT", "Flutter"]
+  "title": "Sistem Monitoring Kesehatan PKM",
+  "description": "Deskripsi terbaru.",
+  "category": "PKM",
+  "status": "OPEN",
+  "maxMembers": 6,
+  "requiredSkills": "Arduino, IoT, Flutter, UI/UX"
 }
+```
 
+Respons `200 OK` berupa objek proyek.
 
-Response Sukses (201 Created):
+### `DELETE /projects/{id}`
 
+Menghapus proyek; hanya ketua tim. Respons `204 No Content` tanpa body.
+
+### `POST /projects/{id}/apply`
+
+Mengirim lamaran ke proyek.
+
+```json
 {
-  "success": true,
-  "message": "Lowongan proyek berhasil dipublikasikan",
-  "data": {
-    "id": 101,
-    "creator_id": 1,
-    "judul_proyek": "Sistem Monitoring Kesehatan PKM-KC",
-    "kategori": "PKM",
-    "status": "OPEN",
-    "created_at": "2026-07-04T11:35:00"
-  }
+  "positionApplied": "Flutter Developer",
+  "message": "Saya berpengalaman membangun aplikasi Flutter."
 }
+```
 
+Kedua field wajib diisi dan `positionApplied` maksimal 150 karakter. Respons `201 Created` berupa objek lamaran.
 
-3.2 Ajukan Bergabung ke Tim (Request Join)
+### `GET /projects/{id}/applications`
 
-Endpoint: POST /projects/{id}/apply
+Mengambil semua lamaran untuk proyek; hanya ketua tim. Respons `200 OK` berupa array objek lamaran.
 
-Autentikasi: Yes (Bearer Token)
+### `PUT /projects/{id}/applications/{appId}/accept`
 
-Request Body:
+Menerima lamaran; pelamar otomatis menjadi anggota tim. Hanya ketua tim. Respons `200 OK` berupa objek lamaran dengan `status: "ACCEPTED"`.
 
-{
-  "pesan_apply": "Halo! Saya Fahmi Nugraha, tertarik mengisi bagian Flutter Developer karena sudah berpengalaman 1 tahun menggunakan Flutter."
-}
+### `PUT /projects/{id}/applications/{appId}/reject`
 
+Menolak lamaran. Hanya ketua tim. Respons `200 OK` berupa objek lamaran dengan `status: "REJECTED"`.
 
-Response Sukses (201 Created):
+### `GET /projects/{id}/team`
 
-{
-  "success": true,
-  "message": "Permintaan bergabung berhasil dikirim. Menunggu persetujuan Ketua Tim.",
-  "data": {
-    "application_id": 50,
-    "project_id": 101,
-    "applicant_id": 3,
-    "status": "PENDING"
-  }
-}
+Mengambil anggota resmi tim. Respons `200 OK` berupa array dengan `id`, `projectId`, `userId`, `userEmail`, `userName`, `userNim`, `teamRole`, dan `joinedAt`.
 
+### `GET /projects/applications/my`
 
-3.3 Kelola Lamaran Masuk (Khusus Ketua Tim)
+Mengambil semua lamaran yang telah dikirim pengguna. Respons `200 OK` berupa array objek lamaran.
 
-Menyetujui atau menolak pendaftar tim.
+Objek lamaran berisi `id`, `projectId`, `projectTitle`, `applicantId`, `applicantEmail`, `applicantName`, `applicantNim`, `positionApplied`, `message`, `status`, `createdAt`, dan `updatedAt`.
 
-Endpoint: PUT /applications/{id}/status
+## 5. Pencocokan
 
-Autentikasi: Yes (Bearer Token)
+Semua endpoint pencocokan memerlukan Bearer token.
 
-Request Body:
+### `GET /match/projects`
 
-{
-  "status": "ACCEPTED", // Nilai: ACCEPTED / REJECTED
-  "role_tim": "Mobile Developer" // Diisi jika ACCEPTED, mencatat riwayat resmi tim
-}
+Mengambil proyek `OPEN` yang diurutkan berdasarkan kecocokan skill pengguna.
 
+### `GET /match/projects/{id}`
 
-Response Sukses (200 OK):
+Menghitung kecocokan pengguna terhadap satu proyek.
 
-{
-  "success": true,
-  "message": "Pendaftar berhasil diterima bergabung di dalam tim.",
-  "data": {
-    "application_id": 50,
-    "status": "ACCEPTED",
-    "role_tim": "Mobile Developer"
-  }
-}
+Kedua endpoint mengembalikan `200 OK` berupa satu objek atau array objek dengan `projectId`, `title`, `description`, `category`, `status`, `requiredSkills`, `maxMembers`, `createdById`, `createdByName`, `createdByEmail`, `currentMemberCount`, `createdAt`, `matchScore`, `matchedSkills`, `missingSkills`, `totalRequired`, dan `totalMatched`.
 
+### `GET /match/collaborators?projectId={id}`
 
-4. Chat & Akses Kontak (/messages & /contacts)
+Mencari calon kolaborator untuk kebutuhan proyek. Parameter `projectId` wajib diisi.
 
-4.1 Kirim & Ambil Chat Internal Proyek (Real-Time Chat)
+**Respons `200 OK`** berupa array dengan field `userId`, `email`, `namaLengkap`, `nim`, `prodi`, `angkatan`, `fotoUrl`, `matchScore`, `matchedSkills`, `allSkills`, dan `alreadyMember`. Nilai `allSkills` menggunakan struktur skill pengguna pada bagian profil.
 
-Hanya bisa diakses oleh anggota tim resmi (tercatat di tabel team_members).
+## 6. Permintaan Akses Kontak
 
-Ambil Riwayat Chat
+Semua endpoint memerlukan Bearer token.
 
-Endpoint: GET /projects/{project_id}/messages
+### `POST /contact-requests/{targetUserId}`
 
-Autentikasi: Yes (Bearer Token)
+Mengirim permintaan melihat kontak pengguna lain yang mengatur kontak sebagai `PRIVATE`. Tidak memiliki request body.
 
-Response Sukses (200 OK):
+**Respons `200 OK`:** objek permintaan kontak.
 
-{
-  "success": true,
-  "message": "Pesan obrolan berhasil dimuat",
-  "data": [
-    {
-      "id": 501,
-      "sender_id": 1,
-      "nama_pengirim": "M. Salman Alfarizi",
-      "pesan": "Halo tim, besok kita kumpul jam 10 pagi di perpus ya untuk bahas proposal.",
-      "created_at": "2026-07-04T10:00:00"
-    },
-    {
-      "id": 502,
-      "sender_id": 3,
-      "nama_pengirim": "Fahmi Nugraha",
-      "pesan": "Siap mas, saya bawa draf rancangan sirkuit IoT nya.",
-      "created_at": "2026-07-04T10:05:00"
-    }
-  ]
-}
+### `GET /contact-requests/incoming`
 
+Mengambil permintaan kontak masuk berstatus `PENDING` untuk pengguna saat ini.
 
-Kirim Chat Baru
+### `GET /contact-requests/outgoing`
 
-Endpoint: POST /projects/{project_id}/messages
+Mengambil seluruh permintaan kontak yang dikirim pengguna saat ini.
 
-Autentikasi: Yes (Bearer Token)
+### `PUT /contact-requests/{requestId}/approve`
 
-Request Body:
+Menyetujui permintaan kontak. Hanya pemilik kontak target yang dapat menjalankannya.
 
-{
-  "pesan": "Oke mas, nanti saya kabari Alif juga."
-}
+### `PUT /contact-requests/{requestId}/reject`
 
+Menolak permintaan kontak. Hanya pemilik kontak target yang dapat menjalankannya.
 
-4.2 Minta Akses Kontak Privat (Contact Request System)
+Keempat endpoint di atas mengembalikan `200 OK` berupa satu objek atau array objek dengan field `id`, `requesterId`, `requesterName`, `requesterEmail`, `requesterNim`, `targetId`, `targetName`, `status`, `createdAt`, dan `updatedAt`.
 
-Jika profil target di-set PRIVATE nomor HP atau Instagram-nya, pengguna lain harus mengajukan izin akses.
+## Catatan Implementasi
 
-Ajukan Permintaan Akses Kontak
-
-Endpoint: POST /contacts/request
-
-Autentikasi: Yes (Bearer Token)
-
-Request Body:
-
-{
-  "owner_id": 12, // ID mahasiswa pemilik kontak privat
-  "contact_type": "PHONE" // Nilai: PHONE, INSTAGRAM, ALL
-}
-
-
-Response Sukses (201 Created):
-
-{
-  "success": true,
-  "message": "Permintaan akses kontak berhasil diajukan.",
-  "data": {
-    "request_id": 88,
-    "status": "PENDING"
-  }
-}
+- Saat ini belum ada controller HTTP untuk pesan dan notifikasi, sehingga belum tersedia endpoint REST untuk kedua fitur tersebut.
+- Tanggal/waktu respons menggunakan format JSON `LocalDateTime`, misalnya `2026-07-21T13:45:00`.
