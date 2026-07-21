@@ -1,7 +1,6 @@
 package BackEnd.SkillBridge.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,71 +8,78 @@ import java.util.List;
 
 @Entity
 @Table(name = "profiles")
-@Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class Profile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ── Relasi 1-to-1 dengan User ──────────────────────────────────────────
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    // ── Biodata ────────────────────────────────────────────────────────────
     @Column(name = "nama_lengkap", length = 150)
     private String namaLengkap;
 
-    @Column(unique = true, length = 20)
+    @Column(name = "nim", length = 20)
     private String nim;
 
-    @Column(length = 100)
+    @Column(name = "prodi", length = 100)
     private String prodi;
 
-    @Column(length = 50)
+    @Column(name = "angkatan", length = 10)
     private String angkatan;
 
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "foto_url", columnDefinition = "TEXT")
+    @Column(name = "foto_url")
     private String fotoUrl;
 
-    // ── Kontak ─────────────────────────────────────────────────────────────
-    @Column(length = 20)
+    @Column(name = "whatsapp", length = 20)
     private String whatsapp;
 
-    @Column(length = 100)
+    @Column(name = "instagram", length = 100)
     private String instagram;
 
-    @Column(length = 150)
+    @Column(name = "linkedin", length = 200)
     private String linkedin;
 
-    // ── Pengaturan Privasi Kontak ──────────────────────────────────────────
-    // PUBLIC  → semua user dapat melihat kontak
-    // PRIVATE → user lain harus kirim request & disetujui dulu
     @Enumerated(EnumType.STRING)
     @Column(name = "contact_privacy", nullable = false)
-    @Builder.Default
     private ContactPrivacy contactPrivacy = ContactPrivacy.PUBLIC;
 
-    // ── Skills ─────────────────────────────────────────────────────────────
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<UserSkill> userSkills = new ArrayList<>();
 
-    // ── Timestamps ─────────────────────────────────────────────────────────
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // ── Constructors ───────────────────────────────────────────────────────
+    public Profile() {}
+
+    // ── Builder ────────────────────────────────────────────────────────────
+    public static Builder builder() { return new Builder(); }
+
+    public static class Builder {
+        private User user;
+        private ContactPrivacy contactPrivacy = ContactPrivacy.PUBLIC;
+
+        public Builder user(User u)                     { this.user = u; return this; }
+        public Builder contactPrivacy(ContactPrivacy c) { this.contactPrivacy = c; return this; }
+
+        public Profile build() {
+            Profile p = new Profile();
+            p.user = user;
+            p.contactPrivacy = contactPrivacy;
+            return p;
+        }
+    }
+
+    // ── JPA callbacks ─────────────────────────────────────────────────────
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -84,4 +90,34 @@ public class Profile {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // ── Getters ────────────────────────────────────────────────────────────
+    public Long getId()                  { return id; }
+    public User getUser()                { return user; }
+    public String getNamaLengkap()       { return namaLengkap; }
+    public String getNim()               { return nim; }
+    public String getProdi()             { return prodi; }
+    public String getAngkatan()          { return angkatan; }
+    public String getBio()               { return bio; }
+    public String getFotoUrl()           { return fotoUrl; }
+    public String getWhatsapp()          { return whatsapp; }
+    public String getInstagram()         { return instagram; }
+    public String getLinkedin()          { return linkedin; }
+    public ContactPrivacy getContactPrivacy() { return contactPrivacy; }
+    public List<UserSkill> getUserSkills()    { return userSkills; }
+    public LocalDateTime getCreatedAt()   { return createdAt; }
+    public LocalDateTime getUpdatedAt()   { return updatedAt; }
+
+    // ── Setters ────────────────────────────────────────────────────────────
+    public void setUser(User user)                       { this.user = user; }
+    public void setNamaLengkap(String namaLengkap)       { this.namaLengkap = namaLengkap; }
+    public void setNim(String nim)                       { this.nim = nim; }
+    public void setProdi(String prodi)                   { this.prodi = prodi; }
+    public void setAngkatan(String angkatan)             { this.angkatan = angkatan; }
+    public void setBio(String bio)                       { this.bio = bio; }
+    public void setFotoUrl(String fotoUrl)               { this.fotoUrl = fotoUrl; }
+    public void setWhatsapp(String whatsapp)             { this.whatsapp = whatsapp; }
+    public void setInstagram(String instagram)           { this.instagram = instagram; }
+    public void setLinkedin(String linkedin)             { this.linkedin = linkedin; }
+    public void setContactPrivacy(ContactPrivacy cp)     { this.contactPrivacy = cp; }
 }

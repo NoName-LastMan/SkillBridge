@@ -5,11 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 public class RegisterRequest {
 
     @NotBlank(message = "Email tidak boleh kosong")
@@ -22,4 +18,14 @@ public class RegisterRequest {
 
     @NotNull(message = "Role tidak boleh kosong")
     private Role role;
+
+    public RegisterRequest() {}
+
+    public String getEmail()    { return email; }
+    public String getPassword() { return password; }
+    public Role getRole()       { return role; }
+
+    public void setEmail(String email)       { this.email = email; }
+    public void setPassword(String password) { this.password = password; }
+    public void setRole(Role role)           { this.role = role; }
 }

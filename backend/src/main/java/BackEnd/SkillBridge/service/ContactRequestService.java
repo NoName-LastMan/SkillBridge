@@ -138,30 +138,23 @@ public class ContactRequestService {
     private ContactRequestResponse enrichResponse(ContactRequest req) {
         String requesterName = profileRepository
                 .findByUserId(req.getRequester().getId())
-                .map(Profile::getNamaLengkap)
+                .map(p -> p.getNamaLengkap())
                 .orElse(null);
 
         String requesterNim = profileRepository
                 .findByUserId(req.getRequester().getId())
-                .map(Profile::getNim)
+                .map(p -> p.getNim())
                 .orElse(null);
 
         String targetName = profileRepository
                 .findByUserId(req.getTarget().getId())
-                .map(Profile::getNamaLengkap)
+                .map(p -> p.getNamaLengkap())
                 .orElse(null);
 
-        return ContactRequestResponse.builder()
-                .id(req.getId())
-                .requesterId(req.getRequester().getId())
-                .requesterEmail(req.getRequester().getEmail())
-                .requesterName(requesterName)
-                .requesterNim(requesterNim)
-                .targetId(req.getTarget().getId())
-                .targetName(targetName)
-                .status(req.getStatus())
-                .createdAt(req.getCreatedAt())
-                .updatedAt(req.getUpdatedAt())
-                .build();
+        ContactRequestResponse res = ContactRequestResponse.from(req);
+        res.setRequesterName(requesterName);
+        res.setRequesterNim(requesterNim);
+        res.setTargetName(targetName);
+        return res;
     }
 }
