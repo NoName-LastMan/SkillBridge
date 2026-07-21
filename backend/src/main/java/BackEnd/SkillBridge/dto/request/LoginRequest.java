@@ -2,12 +2,7 @@ package BackEnd.SkillBridge.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 public class LoginRequest {
 
     @NotBlank(message = "Email tidak boleh kosong")
@@ -15,6 +10,13 @@ public class LoginRequest {
     private String email;
 
     @NotBlank(message = "Password tidak boleh kosong")
-    @Size(min = 6, message = "Password minimal 6 karakter")
     private String password;
+
+    public LoginRequest() {}
+
+    public String getEmail()    { return email; }
+    public String getPassword() { return password; }
+
+    public void setEmail(String email)       { this.email = email; }
+    public void setPassword(String password) { this.password = password; }
 }

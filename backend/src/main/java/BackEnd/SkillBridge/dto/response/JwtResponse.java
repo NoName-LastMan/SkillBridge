@@ -1,16 +1,8 @@
 package BackEnd.SkillBridge.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-
-@Getter
-@Builder
-@AllArgsConstructor
 public class JwtResponse {
 
     private String token;
-    @lombok.Builder.Default
     private String type = "Bearer";
     private Long id;
     private String email;
@@ -22,4 +14,10 @@ public class JwtResponse {
         this.email = email;
         this.role = role;
     }
+
+    public String getToken()  { return token; }
+    public String getType()   { return type; }
+    public Long getId()       { return id; }
+    public String getEmail()  { return email; }
+    public String getRole()   { return role; }
 }
