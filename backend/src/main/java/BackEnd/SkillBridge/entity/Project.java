@@ -50,6 +50,9 @@ public class Project {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     // ── Constructors ───────────────────────────────────────────────────────
     public Project() {}
 
@@ -107,6 +110,7 @@ public class Project {
     public List<TeamMember> getTeamMembers()   { return teamMembers; }
     public LocalDateTime getCreatedAt()   { return createdAt; }
     public LocalDateTime getUpdatedAt()   { return updatedAt; }
+    public LocalDateTime getDeletedAt()   { return deletedAt; }
 
     // ── Setters ────────────────────────────────────────────────────────────
     public void setTitle(String title)               { this.title = title; }
@@ -115,4 +119,5 @@ public class Project {
     public void setStatus(ProjectStatus status)      { this.status = status; }
     public void setMaxMembers(Integer maxMembers)    { this.maxMembers = maxMembers; }
     public void setRequiredSkills(String rs)         { this.requiredSkills = rs; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }

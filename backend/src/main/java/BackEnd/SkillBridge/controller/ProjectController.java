@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/projects")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class ProjectController {
 
     @Autowired
@@ -45,13 +45,15 @@ public class ProjectController {
      * Browse semua proyek OPEN. Mendukung pencarian dengan ?q=keyword
      */
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> getAllProjects(
-            @RequestParam(required = false) String q) {
+    public ResponseEntity<Page<ProjectResponse>> getAllProjects(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long userId = getCurrentUser().getId();
         if (q != null && !q.isBlank()) {
-            return ResponseEntity.ok(projectService.searchProjects(q, userId));
+            return ResponseEntity.ok(projectService.searchProjects(q, userId, page, size));
         }
-        return ResponseEntity.ok(projectService.getAllOpenProjects(userId));
+        return ResponseEntity.ok(projectService.getAllOpenProjects(userId, page, size));
     }
 
     /**

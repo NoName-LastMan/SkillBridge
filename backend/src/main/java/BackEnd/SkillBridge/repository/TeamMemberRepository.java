@@ -17,4 +17,6 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
     // Cek apakah user sudah jadi anggota proyek ini
     boolean existsByProjectIdAndUserId(Long projectId, Long userId);
+
+    long countByProjectId(Long projectId);
 }

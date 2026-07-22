@@ -10,6 +10,9 @@ import BackEnd.SkillBridge.entity.*;
 import BackEnd.SkillBridge.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -61,19 +64,16 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getAllOpenProjects(Long currentUserId) {
-        return projectRepository.findByStatusOrderByCreatedAtDesc(ProjectStatus.OPEN)
-                .stream()
-                .map(p -> buildProjectResponse(p, currentUserId))
-                .toList();
+    public Page<ProjectResponse> getAllOpenProjects(Long currentUserId, int page, int size) {
+        return projectRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(
+                        ProjectStatus.OPEN, pageRequest(page, size))
+                .map(p -> buildProjectResponse(p, currentUserId));
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectResponse> searchProjects(String keyword, Long currentUserId) {
-        return projectRepository.searchByKeyword(keyword, ProjectStatus.OPEN)
-                .stream()
-                .map(p -> buildProjectResponse(p, currentUserId))
-                .toList();
+    public Page<ProjectResponse> searchProjects(String keyword, Long currentUserId, int page, int size) {
+        return projectRepository.searchByKeyword(keyword, ProjectStatus.OPEN, pageRequest(page, size))
+                .map(p -> buildProjectResponse(p, currentUserId));
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +109,9 @@ public class ProjectService {
     public void deleteProject(Long projectId, User currentUser) {
         Project project = findProjectOrThrow(projectId);
         validateOwner(project, currentUser.getId());
-        projectRepository.delete(project);
+        project.setDeletedAt(java.time.LocalDateTime.now());
+        project.setStatus(ProjectStatus.CLOSED);
+        projectRepository.save(project);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -188,6 +190,15 @@ public class ProjectService {
                     "Lamaran ini sudah diproses sebelumnya");
         }
 
+        if (project.getStatus() != ProjectStatus.OPEN) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Proyek tidak lagi membuka rekrutmen");
+        }
+        if (teamMemberRepository.countByProjectId(projectId) >= project.getMaxMembers()) {
+            project.setStatus(ProjectStatus.CLOSED);
+            projectRepository.save(project);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Kapasitas tim sudah penuh");
+        }
+
         // Update status lamaran
         application.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.save(application);
@@ -200,6 +211,11 @@ public class ProjectService {
                     .teamRole(application.getPositionApplied())
                     .build();
             teamMemberRepository.save(member);
+        }
+
+        if (teamMemberRepository.countByProjectId(projectId) >= project.getMaxMembers()) {
+            project.setStatus(ProjectStatus.CLOSED);
+            projectRepository.save(project);
         }
 
         return buildApplicationResponse(application);
@@ -240,8 +256,16 @@ public class ProjectService {
 
     private Project findProjectOrThrow(Long projectId) {
         return projectRepository.findById(projectId)
+                .filter(project -> project.getDeletedAt() == null)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Proyek tidak ditemukan"));
+    }
+
+    private Pageable pageRequest(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page harus >= 0 dan size antara 1 hingga 100");
+        }
+        return PageRequest.of(page, size);
     }
 
     private Application findApplicationOrThrow(Long applicationId, Long projectId) {

@@ -8,6 +8,7 @@ import BackEnd.SkillBridge.service.AdminDashboardService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +32,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminDashboardController {
 
@@ -74,11 +74,13 @@ public class AdminDashboardController {
      *   - isVerified: true | false  (filter status verifikasi)
      */
     @GetMapping("/users")
-    public ResponseEntity<List<AdminUserResponse>> getStudents(
+    public ResponseEntity<Page<AdminUserResponse>> getStudents(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Boolean isVerified) {
+            @RequestParam(required = false) Boolean isVerified,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        List<AdminUserResponse> students = adminDashboardService.getStudents(keyword, isVerified);
+        Page<AdminUserResponse> students = adminDashboardService.getStudents(keyword, isVerified, page, size);
         return ResponseEntity.ok(students);
     }
 
@@ -124,11 +126,13 @@ public class AdminDashboardController {
      *   - keyword : pencarian by judul / deskripsi proyek
      */
     @GetMapping("/projects")
-    public ResponseEntity<List<PlatformStatsResponse.ProjectSummary>> getAllProjectsForModeration(
-            @RequestParam(required = false) String keyword) {
+    public ResponseEntity<Page<PlatformStatsResponse.ProjectSummary>> getAllProjectsForModeration(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        List<PlatformStatsResponse.ProjectSummary> projects =
-                adminDashboardService.getAllProjectsForModeration(keyword);
+        Page<PlatformStatsResponse.ProjectSummary> projects =
+                adminDashboardService.getAllProjectsForModeration(keyword, page, size);
         return ResponseEntity.ok(projects);
     }
 

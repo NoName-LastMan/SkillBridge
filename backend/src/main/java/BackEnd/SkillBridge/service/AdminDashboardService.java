@@ -9,6 +9,7 @@ import BackEnd.SkillBridge.entity.*;
 import BackEnd.SkillBridge.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,27 +134,11 @@ public class AdminDashboardService {
      * @param isVerified    filter status verifikasi - null = semua
      */
     @Transactional(readOnly = true)
-    public List<AdminUserResponse> getStudents(String keyword, Boolean isVerified) {
-        List<User> users;
-
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // Pencarian dengan keyword
-            users = userRepository.searchByKeywordAndRole(keyword.trim(), Role.MAHASISWA);
-            if (isVerified != null) {
-                boolean finalIsVerified = isVerified;
-                users = users.stream()
-                        .filter(u -> u.getIsVerified() == finalIsVerified)
-                        .collect(Collectors.toList());
-            }
-        } else if (isVerified != null) {
-            // Filter by verification status only
-            users = userRepository.findByRoleAndIsVerifiedOrderByCreatedAtDesc(Role.MAHASISWA, isVerified);
-        } else {
-            // Semua mahasiswa
-            users = userRepository.findByRoleOrderByCreatedAtDesc(Role.MAHASISWA);
-        }
-
-        return mapUsersToAdminResponse(users);
+    public Page<AdminUserResponse> getStudents(String keyword, Boolean isVerified, int page, int size) {
+        return userRepository.findStudents(Role.MAHASISWA,
+                        keyword == null || keyword.isBlank() ? null : keyword.trim(), isVerified,
+                        pageRequest(page, size))
+                .map(this::mapUserToAdminResponse);
     }
 
     /**
@@ -256,16 +241,10 @@ public class AdminDashboardService {
      * @param keyword kata kunci pencarian - bisa null/kosong
      */
     @Transactional(readOnly = true)
-    public List<PlatformStatsResponse.ProjectSummary> getAllProjectsForModeration(String keyword) {
-        List<Project> projects;
-
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            projects = projectRepository.adminSearchByKeyword(keyword.trim());
-        } else {
-            projects = projectRepository.findAllByOrderByCreatedAtDesc();
-        }
-
-        return mapProjectsToSummary(projects);
+    public Page<PlatformStatsResponse.ProjectSummary> getAllProjectsForModeration(String keyword, int page, int size) {
+        return projectRepository.findActiveForModeration(
+                        keyword == null || keyword.isBlank() ? null : keyword.trim(), pageRequest(page, size))
+                .map(this::buildProjectSummary);
     }
 
     /**
@@ -284,8 +263,10 @@ public class AdminDashboardService {
         User owner = project.getCreatedBy();
         String projectTitle = project.getTitle();
 
-        // Hapus proyek (cascade ke applications, teamMembers)
-        projectRepository.delete(project);
+        // Soft delete agar riwayat moderasi tetap dapat diaudit.
+        project.setDeletedAt(java.time.LocalDateTime.now());
+        project.setStatus(ProjectStatus.CLOSED);
+        projectRepository.save(project);
 
         // Kirim notifikasi ke pemilik proyek
         Notification notification = Notification.builder()
@@ -322,6 +303,13 @@ public class AdminDashboardService {
         return users.stream()
                 .map(u -> buildAdminUserResponse(u, profileMap.get(u.getId())))
                 .collect(Collectors.toList());
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page harus >= 0 dan size antara 1 hingga 100");
+        }
+        return PageRequest.of(page, size);
     }
 
     /**

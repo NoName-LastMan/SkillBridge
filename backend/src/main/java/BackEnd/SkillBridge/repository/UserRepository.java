@@ -3,6 +3,8 @@ package BackEnd.SkillBridge.repository;
 import BackEnd.SkillBridge.entity.Role;
 import BackEnd.SkillBridge.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -39,4 +41,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "ORDER BY u.createdAt DESC")
     List<User> searchByKeywordAndRole(@Param("keyword") String keyword,
                                       @Param("role") Role role);
+
+    @Query("SELECT u FROM User u LEFT JOIN Profile p ON p.user = u " +
+           "WHERE u.role = :role AND (:isVerified IS NULL OR u.isVerified = :isVerified) " +
+           "AND (:keyword IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.namaLengkap) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.nim) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<User> findStudents(@Param("role") Role role, @Param("keyword") String keyword,
+                            @Param("isVerified") Boolean isVerified, Pageable pageable);
 }

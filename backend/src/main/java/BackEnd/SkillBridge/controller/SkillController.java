@@ -13,7 +13,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/skills")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class SkillController {
 
     @Autowired
