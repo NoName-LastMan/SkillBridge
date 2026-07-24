@@ -59,11 +59,15 @@ public class MessageService {
 
         Message saved = messageRepository.save(message);
 
-        // Kirim notifikasi ke penerima
-        String senderName = profileRepository.findByUserId(sender.getId())
-                .map(p -> p.getNamaLengkap() != null ? p.getNamaLengkap() : sender.getEmail())
-                .orElse(sender.getEmail());
-        notificationService.notifyNewMessage(receiver, senderName, sender.getId());
+        // Kirim notifikasi ke penerima (Isolasi notifikasi jika terjadi error)
+        try {
+            String senderName = profileRepository.findByUserId(sender.getId())
+                    .map(p -> p.getNamaLengkap() != null ? p.getNamaLengkap() : sender.getEmail())
+                    .orElse(sender.getEmail());
+            notificationService.notifyNewMessage(receiver, senderName, sender.getId());
+        } catch (Exception ignored) {
+            // Isolasi notifikasi untuk MVP
+        }
 
         return buildMessageResponse(saved);
     }

@@ -45,7 +45,7 @@ public class MatchingService {
     public List<MatchProjectResult> matchProjectsForUser(User user) {
         List<String> mySkillNames = getUserSkillNames(user.getId());
 
-        return projectRepository.findByStatusOrderByCreatedAtDesc(ProjectStatus.OPEN)
+        return projectRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus.OPEN)
                 .stream()
                 .map(project -> buildMatchResult(project, mySkillNames, user.getId()))
                 .sorted(Comparator.comparingDouble(MatchProjectResult::getMatchScore).reversed())

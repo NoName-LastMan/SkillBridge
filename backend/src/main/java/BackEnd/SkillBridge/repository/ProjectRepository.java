@@ -20,6 +20,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // Proyek berdasarkan status
     Page<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status, Pageable pageable);
+    List<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status);
 
     // Proyek berdasarkan kategori dan status
     List<Project> findByCategoryAndStatusOrderByCreatedAtDesc(ProjectCategory category, ProjectStatus status);
@@ -41,8 +42,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // ── Admin: search all projects (no status filter) ─────────────────────
     @Query("SELECT p FROM Project p WHERE p.deletedAt IS NULL AND " +
-           "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "ORDER BY p.createdAt DESC")
     List<Project> adminSearchByKeyword(@Param("keyword") String keyword);
 

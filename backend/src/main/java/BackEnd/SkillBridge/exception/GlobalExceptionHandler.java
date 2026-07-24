@@ -20,9 +20,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        Map<String, String> errors = new LinkedHashMap<>();
+        java.util.List<String> errors = new java.util.ArrayList<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
+            errors.add(error.getField() + ": " + error.getDefaultMessage());
         }
         return error(HttpStatus.BAD_REQUEST, "Validation failed", "Data permintaan tidak valid", request, errors);
     }
@@ -44,8 +44,8 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String error, String message,
-                                                    HttpServletRequest request, Map<String, String> details) {
+                                                    HttpServletRequest request, java.util.List<String> details) {
         return ResponseEntity.status(status).body(new ApiErrorResponse(status.value(), error, message,
-                request.getRequestURI(), details));
+                details, request.getRequestURI()));
     }
 }
