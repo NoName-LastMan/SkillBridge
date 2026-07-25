@@ -12,19 +12,19 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        java.util.List<String> errors = new java.util.ArrayList<>();
+        List<String> errors = new ArrayList<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             errors.add(error.getField() + ": " + error.getDefaultMessage());
         }
-        return error(HttpStatus.BAD_REQUEST, "Validation failed", "Data permintaan tidak valid", request, errors);
+        return error(HttpStatus.BAD_REQUEST, "Bad Request", "Data permintaan tidak valid", request, errors);
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HttpMessageNotReadableException.class})
@@ -44,8 +44,13 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String error, String message,
-                                                    HttpServletRequest request, java.util.List<String> details) {
-        return ResponseEntity.status(status).body(new ApiErrorResponse(status.value(), error, message,
-                details, request.getRequestURI()));
+                                                   HttpServletRequest request, List<String> errors) {
+        return ResponseEntity.status(status).body(new ApiErrorResponse(
+                status.value(),
+                error,
+                message,
+                errors,
+                request.getRequestURI()
+        ));
     }
 }

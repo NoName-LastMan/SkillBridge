@@ -4,7 +4,6 @@ import BackEnd.SkillBridge.dto.request.ModerateProjectRequest;
 import BackEnd.SkillBridge.dto.request.VerifyUserRequest;
 import BackEnd.SkillBridge.dto.response.AdminUserResponse;
 import BackEnd.SkillBridge.dto.response.PlatformStatsResponse;
-import BackEnd.SkillBridge.dto.response.ProjectResponse;
 import BackEnd.SkillBridge.entity.*;
 import BackEnd.SkillBridge.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,16 +16,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * Service layer untuk Modul Admin Dashboard.
- *
- * Fungsi utama:
- *  1. Statistik aktivitas platform.
- *  2. Manajemen & verifikasi akun mahasiswa.
- *  3. Moderasi konten (hapus proyek).
  */
 @Service
 public class AdminDashboardService {
@@ -59,17 +52,12 @@ public class AdminDashboardService {
     // 1. PLATFORM STATISTICS
     // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Mengagregasi statistik platform secara keseluruhan.
-     * Mencakup user, project, application, dan aktivitas lainnya.
-     */
     @Transactional(readOnly = true)
     public PlatformStatsResponse getPlatformStats() {
         PlatformStatsResponse stats = new PlatformStatsResponse();
 
-        // ── User metrics ───────────────────────────────────────────────────
-        long totalStudents   = userRepository.countByRole(Role.MAHASISWA);
-        long totalAdmins     = userRepository.countByRole(Role.ADMIN);
+        long totalStudents    = userRepository.countByRole(Role.MAHASISWA);
+        long totalAdmins      = userRepository.countByRole(Role.ADMIN);
         long verifiedStudents = userRepository.countByRoleAndIsVerified(Role.MAHASISWA, true);
 
         stats.setTotalUsers(totalStudents + totalAdmins);
@@ -78,10 +66,9 @@ public class AdminDashboardService {
         stats.setUnverifiedStudents(totalStudents - verifiedStudents);
         stats.setTotalAdmins(totalAdmins);
 
-        // ── Project metrics ────────────────────────────────────────────────
-        long totalProjects    = projectRepository.count();
-        long openProjects     = projectRepository.countByStatus(ProjectStatus.OPEN);
-        long closedProjects   = projectRepository.countByStatus(ProjectStatus.CLOSED);
+        long totalProjects     = projectRepository.count();
+        long openProjects      = projectRepository.countByStatus(ProjectStatus.OPEN);
+        long closedProjects    = projectRepository.countByStatus(ProjectStatus.CLOSED);
         long completedProjects = projectRepository.countByStatus(ProjectStatus.COMPLETED);
 
         stats.setTotalProjects(totalProjects);
@@ -89,9 +76,8 @@ public class AdminDashboardService {
         stats.setClosedProjects(closedProjects);
         stats.setCompletedProjects(completedProjects);
 
-        // ── Application metrics ────────────────────────────────────────────
-        long totalApplications   = applicationRepository.count();
-        long pendingApplications = applicationRepository.countByStatus(ApplicationStatus.PENDING);
+        long totalApplications    = applicationRepository.count();
+        long pendingApplications  = applicationRepository.countByStatus(ApplicationStatus.PENDING);
         long acceptedApplications = applicationRepository.countByStatus(ApplicationStatus.ACCEPTED);
         long rejectedApplications = applicationRepository.countByStatus(ApplicationStatus.REJECTED);
 
@@ -100,19 +86,16 @@ public class AdminDashboardService {
         stats.setAcceptedApplications(acceptedApplications);
         stats.setRejectedApplications(rejectedApplications);
 
-        // ── Activity metrics ───────────────────────────────────────────────
         stats.setTotalContactRequests(contactRequestRepository.count());
         stats.setTotalMessages(messageRepository.count());
         stats.setTotalSkills(skillRepository.count());
 
-        // ── Recent Users (10 terbaru) ──────────────────────────────────────
         List<User> recentUserList = userRepository.findByRoleOrderByCreatedAtDesc(Role.MAHASISWA)
                 .stream()
                 .limit(10)
                 .collect(Collectors.toList());
         stats.setRecentUsers(mapUsersToAdminResponse(recentUserList));
 
-        // ── Recent Projects (10 terbaru) ───────────────────────────────────
         List<Project> recentProjectList = projectRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .limit(10)
@@ -126,13 +109,6 @@ public class AdminDashboardService {
     // 2. USER MANAGEMENT & ACCOUNT VERIFICATION
     // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Mendapatkan semua user mahasiswa dengan data profil lengkap.
-     * Mendukung filter berdasarkan status verifikasi dan kata kunci pencarian.
-     *
-     * @param keyword       kata kunci pencarian (email, namaLengkap, nim) - bisa null/kosong
-     * @param isVerified    filter status verifikasi - null = semua
-     */
     @Transactional(readOnly = true)
     public Page<AdminUserResponse> getStudents(String keyword, Boolean isVerified, int page, int size) {
         return userRepository.findStudents(Role.MAHASISWA,
@@ -141,11 +117,6 @@ public class AdminDashboardService {
                 .map(this::mapUserToAdminResponse);
     }
 
-    /**
-     * Mendapatkan detail satu user (mahasiswa) by ID beserta profil lengkap.
-     *
-     * @param userId ID user yang diminta
-     */
     @Transactional(readOnly = true)
     public AdminUserResponse getStudentById(Long userId) {
         User user = userRepository.findById(userId)
@@ -160,13 +131,6 @@ public class AdminDashboardService {
         return mapUserToAdminResponse(user);
     }
 
-    /**
-     * Memverifikasi atau membatalkan verifikasi akun mahasiswa.
-     * Mengirimkan notifikasi kepada mahasiswa bersangkutan.
-     *
-     * @param userId  ID user yang akan diubah status verifikasinya
-     * @param request DTO berisi status verifikasi baru dan alasan opsional
-     */
     @Transactional
     public AdminUserResponse verifyUser(Long userId, VerifyUserRequest request) {
         User user = userRepository.findById(userId)
@@ -188,11 +152,9 @@ public class AdminDashboardService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, msg);
         }
 
-        // Update status verifikasi
         user.setIsVerified(newStatus);
         userRepository.save(user);
 
-        // Kirim notifikasi ke mahasiswa
         Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
         String namaDisplay = (profile != null && profile.getNamaLengkap() != null)
                 ? profile.getNamaLengkap()
@@ -234,12 +196,6 @@ public class AdminDashboardService {
     // 3. CONTENT MODERATION
     // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Mendapatkan semua proyek untuk keperluan moderasi admin.
-     * Mendukung filter keyword (judul/deskripsi).
-     *
-     * @param keyword kata kunci pencarian - bisa null/kosong
-     */
     @Transactional(readOnly = true)
     public Page<PlatformStatsResponse.ProjectSummary> getAllProjectsForModeration(String keyword, int page, int size) {
         return projectRepository.findActiveForModeration(
@@ -247,13 +203,6 @@ public class AdminDashboardService {
                 .map(this::buildProjectSummary);
     }
 
-    /**
-     * Menghapus proyek yang melanggar kebijakan (moderasi konten).
-     * Mengirimkan notifikasi kepada pemilik proyek.
-     *
-     * @param projectId ID proyek yang akan dihapus
-     * @param request   DTO berisi alasan penghapusan
-     */
     @Transactional
     public void moderateProject(Long projectId, ModerateProjectRequest request) {
         Project project = projectRepository.findById(projectId)
@@ -263,12 +212,10 @@ public class AdminDashboardService {
         User owner = project.getCreatedBy();
         String projectTitle = project.getTitle();
 
-        // Soft delete agar riwayat moderasi tetap dapat diaudit.
         project.setDeletedAt(java.time.LocalDateTime.now());
         project.setStatus(ProjectStatus.CLOSED);
         projectRepository.save(project);
 
-        // Kirim notifikasi ke pemilik proyek
         Notification notification = Notification.builder()
                 .user(owner)
                 .type(NotificationType.PROJECT_MODERATED)
@@ -286,15 +233,28 @@ public class AdminDashboardService {
     // HELPER: Mapping Methods
     // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Map daftar User ke daftar AdminUserResponse dengan data profil.
-     */
+    private PlatformStatsResponse.ProjectSummary buildProjectSummary(Project p) {
+        User owner = p.getCreatedBy();
+        Profile ownerProfile = profileRepository.findByUserId(owner.getId()).orElse(null);
+        String ownerNama = (ownerProfile != null && ownerProfile.getNamaLengkap() != null)
+                ? ownerProfile.getNamaLengkap()
+                : owner.getEmail();
+
+        return new PlatformStatsResponse.ProjectSummary(
+                p.getId(),
+                p.getTitle(),
+                p.getStatus().name(),
+                p.getCategory().name(),
+                owner.getEmail(),
+                ownerNama
+        );
+    }
+
     private List<AdminUserResponse> mapUsersToAdminResponse(List<User> users) {
         if (users.isEmpty()) return List.of();
 
         List<Long> userIds = users.stream().map(User::getId).collect(Collectors.toList());
 
-        // Ambil semua profil sekaligus untuk menghindari N+1 query
         Map<Long, Profile> profileMap = profileRepository.findAll()
                 .stream()
                 .filter(p -> userIds.contains(p.getUser().getId()))
@@ -312,9 +272,6 @@ public class AdminDashboardService {
         return PageRequest.of(page, size);
     }
 
-    /**
-     * Map satu User ke AdminUserResponse dengan data profil.
-     */
     private AdminUserResponse mapUserToAdminResponse(User user) {
         Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
         return buildAdminUserResponse(user, profile);
@@ -340,26 +297,8 @@ public class AdminDashboardService {
         return resp;
     }
 
-    /**
-     * Map daftar Project ke ProjectSummary ringkas untuk admin.
-     */
     private List<PlatformStatsResponse.ProjectSummary> mapProjectsToSummary(List<Project> projects) {
-        return projects.stream().map(p -> {
-            User owner = p.getCreatedBy();
-            Profile ownerProfile = profileRepository.findByUserId(owner.getId()).orElse(null);
-            String ownerNama = (ownerProfile != null && ownerProfile.getNamaLengkap() != null)
-                    ? ownerProfile.getNamaLengkap()
-                    : owner.getEmail();
-
-            return new PlatformStatsResponse.ProjectSummary(
-                    p.getId(),
-                    p.getTitle(),
-                    p.getStatus().name(),
-                    p.getCategory().name(),
-                    owner.getEmail(),
-                    ownerNama
-            );
-        }).collect(Collectors.toList());
+        return projects.stream().map(this::buildProjectSummary).collect(Collectors.toList());
     }
 
     private PlatformStatsResponse.ProjectSummary buildProjectSummary(Project p) {

@@ -3,9 +3,9 @@ package BackEnd.SkillBridge.repository;
 import BackEnd.SkillBridge.entity.Project;
 import BackEnd.SkillBridge.entity.ProjectCategory;
 import BackEnd.SkillBridge.entity.ProjectStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -20,6 +20,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // Proyek berdasarkan status
     Page<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status, Pageable pageable);
+    List<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status);
+
     List<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status);
 
     // Proyek berdasarkan kategori dan status

@@ -2,11 +2,15 @@
 .DS_Store
 .idea/
 .vscode/
+.env
+*.env
+!.env.example
 
 # Ignore backend build files (kalau pakai Maven)
 backend/target/
 backend/*.iml
 backend/.mvn/
+backend/.env
 
 # Ignore frontend build files & node_modules
 frontend/node_modules/
