@@ -1,295 +1,557 @@
-# Dokumentasi REST API SkillBridge
+# 🚀 SkillBridge API Documentation — MVP Release
 
-Dokumentasi ini mencakup seluruh endpoint REST API aktif pada backend Spring Boot **SkillBridge**.
+Dokumentasi komprehensif RESTful API backend **SkillBridge** versi MVP (Minimum Viable Product).
 
-## Informasi Umum
+---
 
-- **Base URL Lokal:** `http://localhost:8080/api`
-- **Format Data:** `application/json`
-- **Autentikasi:** Semua endpoint selain `/api/auth/**` memerlukan header HTTP berikut:
+## 📑 Daftar Isi
+1. [Pengenalan & Arsitektur API](#1-pengenalan--arsitektur-api)
+2. [Autentikasi & Keamanan](#2-autentikasi--keamanan)
+3. [Format Respons & Error Handling](#3-format-respons--error-handling)
+4. [Daftar Enum Platform](#4-daftar-enum-platform)
+5. [Spesifikasi Endpoint API](#5-spesifikasi-endpoint-api)
+   - [5.1 Modul Autentikasi (`/api/auth`)](#51-modul-autentikasi-apiauth)
+   - [5.2 Modul Profil & Skill (`/api/profile` & `/api/skills`)](#52-modul-profil--skill-apiprofile--apiskills)
+   - [5.3 Modul Proyek & Rekrutmen (`/api/projects`)](#53-modul-proyek--rekrutmen-apiprojects)
+   - [5.4 Modul Permintaan Akses Kontak (`/api/contact-requests`)](#54-modul-permintaan-akses-kontak-apicontact-requests)
+   - [5.5 Modul Sistem Pencocokan / Matching (`/api/match`)](#55-modul-sistem-pencocokan--matching-apimatch)
+   - [5.6 Modul Pesan & Obrolan (`/api/messages`)](#56-modul-pesan--obrolan-apimessages)
+6. [Alur Pengujian MVP (Testing Flow Guide)](#6-alur-pengujian-mvp-testing-flow-guide)
+
+---
+
+## 1. 🌐 Pengenalan & Arsitektur API
+
+| Parameter | Spesifikasi |
+| :--- | :--- |
+| **Base URL (Local)** | `http://localhost:8080` |
+| **Default Protocol** | HTTP / HTTPS |
+| **Content-Type** | `application/json` |
+| **Format Encoding** | UTF-8 |
+
+---
+
+## 2. 🔑 Autentikasi & Keamanan
+
+Autentikasi menggunakan **JSON Web Token (JWT)** Stateless. Kecuali endpoint publik pada `/api/auth/**`, seluruh endpoint memerlukan header HTTP berikut:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer <JWT_TOKEN_ANDA>
+Content-Type: application/json
 ```
 
-### Format Pagination (`Page<T>`)
-Endpoint yang mendukung pagination (misalnya daftar proyek dan daftar mahasiswa admin) mengembalikan objek halaman standar Spring Data:
+---
 
-```json
-{
-  "content": [ ... ],
-  "pageable": {
-    "pageNumber": 0,
-    "pageSize": 20
-  },
-  "totalPages": 1,
-  "totalElements": 5,
-  "size": 20,
-  "number": 0
-}
-```
+## 3. ⚠️ Format Respons & Error Handling
 
-### Format Respons Error Standar (`ApiErrorResponse`)
-Semua exception dan error validasi ditangani secara terpusat oleh `GlobalExceptionHandler` dan mengembalikan respons dengan format standar:
+### Standard Error Response Format
+Jika terjadi kesalahan (*Validation*, *Bad Request*, *Forbidden*, *Not Found*, dll.), server akan mengembalikan objek JSON berikut:
 
 ```json
 {
   "status": 400,
   "error": "Bad Request",
-  "message": "Data permintaan tidak valid",
+  "message": "NIM sudah digunakan",
   "errors": [
-    "email: format email tidak valid",
-    "password: minimal 6 karakter"
+    "nim: NIM sudah terdaftar di sistem"
   ],
-  "timestamp": "2026-07-23T21:50:00",
-  "path": "/api/auth/register"
+  "timestamp": "2026-07-24T21:45:00",
+  "path": "/api/profile/me"
 }
 ```
 
-- **Kode Status HTTP Umum:**
-  - `200 OK`: Permintaan berhasil.
-  - `201 Created`: Resource berhasil dibuat.
-  - `204 No Content`: Aksi berhasil tanpa response body.
-  - `400 Bad Request`: Validasi gagal atau format data tidak sesuai.
-  - `401 Unauthorized`: Token JWT tidak valid atau tidak disediakan.
-  - `403 Forbidden`: Hak akses tidak mencukupi.
-  - `404 Not Found`: Resource tidak ditemukan.
-  - `409 Conflict`: Bentrokan aturan bisnis (misal: email sudah terdaftar, kapasitas tim penuh).
+### Ringkasan Kode Status HTTP
+* **`200 OK`**: Permintaan berhasil diproses.
+* **`201 Created`**: Sumber daya baru berhasil dibuat.
+* **`204 No Content`**: Permintaan berhasil, tidak ada data kembalian (contoh: DELETE).
+* **`400 Bad Request`**: Format JSON tidak valid atau validasi input gagal.
+* **`401 Unauthorized`**: Token JWT tidak valid, kedaluwarsa, atau tidak dikirimkan.
+* **`403 Forbidden`**: Tidak memiliki hak akses terhadap resource/aksi tersebut.
+* **`404 Not Found`**: Resource yang diminta tidak ditemukan.
+* **`409 Conflict`**: Terjadi bentrokan data (contoh: email/NIM ganda, lamaran ganda).
 
 ---
 
-## Nilai Enum
+## 4. 📚 Daftar Enum Platform
 
-| Enum | Nilai yang Didukung |
-| --- | --- |
-| `Role` | `ADMIN`, `MAHASISWA` |
-| `SkillLevel` | `BEGINNER`, `INTERMEDIATE`, `ADVANCED` |
-| `ContactPrivacy` | `PUBLIC`, `PRIVATE` |
-| `ProjectCategory` | `PKM`, `LOMBA`, `STARTUP`, `PENELITIAN`, `MAGANG`, `OPEN_SOURCE`, `LAINNYA` |
-| `ProjectStatus` | `OPEN`, `CLOSED`, `COMPLETED` |
-| `ApplicationStatus` | `PENDING`, `ACCEPTED`, `REJECTED` |
-| `ContactRequestStatus` | `PENDING`, `APPROVED`, `REJECTED` |
-| `NotificationType` | `APPLICATION_RECEIVED`, `APPLICATION_ACCEPTED`, `APPLICATION_REJECTED`, `CONTACT_REQUEST_RECEIVED`, `CONTACT_REQUEST_APPROVED`, `CONTACT_REQUEST_REJECTED`, `CONTACT_AUTO_APPROVED`, `NEW_MESSAGE`, `ACCOUNT_VERIFIED`, `ACCOUNT_UNVERIFIED`, `PROJECT_MODERATED` |
+### `Role`
+* `MAHASISWA` — Akun pengguna utama (Mahasiswa).
+* `ADMIN` — Akun pengelola sistem.
+
+### `ContactPrivacy`
+* `PUBLIC` — Kontak (WhatsApp, Instagram, LinkedIn) dapat dilihat oleh seluruh pengguna terautentikasi.
+* `PRIVATE` — Kontak hanya dapat dilihat setelah permintaan akses disetujui (*APPROVED*).
+
+### `SkillLevel`
+* `BEGINNER` — Tingkat Pemula.
+* `INTERMEDIATE` — Tingkat Menengah.
+* `ADVANCED` — Tingkat Mahir / Ahli.
+
+### `ProjectCategory`
+* `PKM` — Program Kreativitas Mahasiswa.
+* `LOMBA` — Kompetisi / Hackathon.
+* `STARTUP` — Proyek Startup / Bisnis.
+* `PENELITIAN` — Riset & Penelitian Akademik.
+* `MAGANG` — Proyek Magang / Internship.
+* `OPEN_SOURCE` — Proyek Kontribusi Open Source.
+* `LAINNYA` — Kategori lainnya.
+
+### `ProjectStatus`
+* `OPEN` — Rekrutmen sedang dibuka.
+* `CLOSED` — Rekrutmen ditutup (kapasitas penuh / ditutup ketua).
+* `COMPLETED` — Proyek telah selesai dilaksanakan.
+
+### `ApplicationStatus`
+* `PENDING` — Menunggu keputusan ketua tim.
+* `ACCEPTED` — Diterima (otomatis bergabung menjadi anggota tim).
+* `REJECTED` — Ditolak.
+
+### `ContactRequestStatus`
+* `PENDING` — Permintaan menunggu persetujuan.
+* `APPROVED` — Permintaan disetujui.
+* `REJECTED` — Permintaan ditolak.
 
 ---
 
-## 1. Autentikasi (`/api/auth`)
+## 5. 📑 Spesifikasi Endpoint API
 
-### `POST /api/auth/register`
-Mendaftarkan akun baru (`MAHASISWA` atau `ADMIN`) dan otomatis membuat profil kosong. Tidak memerlukan token.
+### 5.1 Modul Autentikasi (`/api/auth`)
 
+#### 1. Registrasi Akun Baru
+* **Endpoint:** `POST /api/auth/register`
+* **Keamanan:** Public
+* **Request Body:**
 ```json
 {
-  "email": "salman@student.unimus.ac.id",
-  "password": "password123",
+  "email": "budi@student.ac.id",
+  "password": "Password123!",
   "role": "MAHASISWA"
 }
 ```
-
-**Respons `200 OK`:**
+* **Response (200 OK):**
 ```json
 {
   "message": "User berhasil didaftarkan!"
 }
 ```
 
-### `POST /api/auth/login`
-Masuk menggunakan email dan password. Tidak memerlukan token.
-
+#### 2. Login Pengguna
+* **Endpoint:** `POST /api/auth/login`
+* **Keamanan:** Public
+* **Request Body:**
 ```json
 {
-  "email": "salman@student.unimus.ac.id",
-  "password": "password123"
+  "email": "budi@student.ac.id",
+  "password": "Password123!"
 }
 ```
-
-**Respons `200 OK`:**
+* **Response (200 OK):**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJidWRpQHN0dWRlbnQuYWMuaWQiLCJpYXQiOjE3Nzk4NDgwMDAsImV4cCI6MTc3OTkzNDQwMH0...",
   "type": "Bearer",
   "id": 1,
-  "email": "salman@student.unimus.ac.id",
+  "email": "budi@student.ac.id",
   "role": "MAHASISWA"
 }
 ```
 
 ---
 
-## 2. Profil dan Skill Saya (`/api/profile`)
+### 5.2 Modul Profil & Skill (`/api/profile` & `/api/skills`)
 
-### `GET /api/profile/me`
-Mengambil profil lengkap pengguna yang sedang login.
-
-### `PUT /api/profile/me`
-Memperbarui biodata dan kontak pengguna.
-
+#### 1. Ambil Profil Saya
+* **Endpoint:** `GET /api/profile/me`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
 ```json
 {
-  "namaLengkap": "M. Salman Alfarizi",
-  "nim": "H2A022001",
-  "prodi": "Informatika",
+  "id": 1,
+  "userId": 1,
+  "email": "budi@student.ac.id",
+  "namaLengkap": "Budi Santoso",
+  "nim": "220101001",
+  "prodi": "Teknik Informatika",
   "angkatan": "2022",
-  "bio": "Backend developer.",
-  "fotoUrl": "https://example.com/foto.jpg",
-  "whatsapp": "08123456789",
-  "instagram": "salman_alfarizi",
-  "linkedin": "https://linkedin.com/in/salman"
+  "bio": "Software Engineer & AI Enthusiast",
+  "fotoUrl": "https://example.com/budi.jpg",
+  "whatsapp": "081234567890",
+  "instagram": "@budi.dev",
+  "linkedin": "https://linkedin.com/in/budisantoso",
+  "contactPrivacy": "PUBLIC",
+  "skills": [
+    {
+      "skillId": 1,
+      "skillName": "Java",
+      "category": "Backend",
+      "level": "ADVANCED"
+    }
+  ]
 }
 ```
 
-### `PUT /api/profile/me/privacy`
-Mengatur visibilitas kontak (`PUBLIC` atau `PRIVATE`).
+#### 2. Update Biodata & Kontak Profil
+* **Endpoint:** `PUT /api/profile/me`
+* **Keamanan:** Authenticated
+* **Request Body:**
+```json
+{
+  "namaLengkap": "Budi Santoso, S.Kom",
+  "nim": "220101001",
+  "prodi": "Teknik Informatika",
+  "angkatan": "2022",
+  "bio": "Fullstack Java & React Developer",
+  "fotoUrl": "https://example.com/budi_new.jpg",
+  "whatsapp": "081234567890",
+  "instagram": "@budi.tech",
+  "linkedin": "https://linkedin.com/in/budisantoso"
+}
+```
+* **Response (200 OK):** Sama dengan struktur `ProfileResponse`.
 
+#### 3. Update Privasi Kontak
+* **Endpoint:** `PUT /api/profile/me/privacy`
+* **Keamanan:** Authenticated
+* **Request Body:**
 ```json
 {
   "contactPrivacy": "PRIVATE"
 }
 ```
+* **Response (200 OK):** Sama dengan struktur `ProfileResponse`.
 
-### `GET /api/profile/me/skills`
-Mengambil daftar skill pengguna.
+#### 4. Lihat Profil Publik Pengguna Lain
+* **Endpoint:** `GET /api/profile/{userId}`
+* **Keamanan:** Authenticated
+* **Response (200 OK - Jika Privacy PRIVATE & Belum Approved):**
+```json
+{
+  "userId": 2,
+  "namaLengkap": "Siti Rahma",
+  "nim": "220101002",
+  "prodi": "Sistem Informasi",
+  "angkatan": "2022",
+  "bio": "UI/UX Designer",
+  "fotoUrl": "https://example.com/siti.jpg",
+  "whatsapp": null,
+  "instagram": null,
+  "linkedin": null,
+  "contactPrivacy": "PRIVATE",
+  "contactRequestStatus": null,
+  "skills": []
+}
+```
 
-### `POST /api/profile/me/skills`
-Menambahkan skill ke profil pengguna.
+#### 5. Ambil Daftar Skill Saya
+* **Endpoint:** `GET /api/profile/me/skills`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
+```json
+[
+  {
+    "skillId": 1,
+    "skillName": "Spring Boot",
+    "category": "Backend",
+    "level": "INTERMEDIATE"
+  }
+]
+```
 
+#### 6. Tambahkan Skill ke Profil
+* **Endpoint:** `POST /api/profile/me/skills`
+* **Keamanan:** Authenticated
+* **Request Body:**
 ```json
 {
   "skillId": 1,
-  "level": "INTERMEDIATE"
+  "level": "ADVANCED"
 }
 ```
+* **Response (200 OK):** `UserSkillResponse`
 
-### `DELETE /api/profile/me/skills/{skillId}`
-Menghapus skill dari profil pengguna. Respons `204 No Content`.
+#### 7. Hapus Skill dari Profil
+* **Endpoint:** `DELETE /api/profile/me/skills/{skillId}`
+* **Keamanan:** Authenticated
+* **Response (204 No Content)**
 
-### `GET /api/profile/{userId}`
-Melihat profil pengguna lain (kontak disembunyikan jika `PRIVATE` dan belum disetujui).
+#### 8. Lihat Semua Master Skill
+* **Endpoint:** `GET /api/skills`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Spring Boot",
+    "category": "Backend"
+  },
+  {
+    "id": 2,
+    "name": "React.js",
+    "category": "Frontend"
+  }
+]
+```
+
+#### 9. Cari Master Skill
+* **Endpoint:** `GET /api/skills/search?q=spring`
+* **Keamanan:** Authenticated
+* **Response (200 OK):** Daftar skill yang sesuai.
 
 ---
 
-## 3. Master Skill (`/api/skills`)
+### 5.3 Modul Proyek & Rekrutmen (`/api/projects`)
 
-- `GET /api/skills`: Mengambil seluruh master skill.
-- `GET /api/skills/search?q={keyword}`: Mencari skill berdasarkan nama.
-- `POST /api/skills` *(Admin Only)*: Menambahkan master skill baru.
-
----
-
-## 4. Proyek dan Rekrutmen (`/api/projects`)
-
-### `GET /api/projects`
-Mengambil daftar proyek `OPEN` dengan pagination dan pencarian opsional (`?q=keyword&page=0&size=20`).
-
-### `POST /api/projects`
-Membuat proyek baru (pembuat otomatis menjadi Ketua Tim dan anggota pertama).
-
+#### 1. Buat Proyek Baru
+* **Endpoint:** `POST /api/projects`
+* **Keamanan:** Authenticated (Creator otomatis jadi Ketua Tim)
+* **Request Body:**
 ```json
 {
-  "title": "Sistem IoT Monitoring",
-  "description": "Pengembangan alat IoT.",
-  "category": "PKM",
-  "maxMembers": 4,
-  "requiredSkills": "Arduino, Flutter"
+  "title": "Aplikasi SkillBridge Mobile",
+  "description": "Membangun aplikasi platform kolaborasi mahasiswa.",
+  "category": "LOMBA",
+  "maxMembers": 3,
+  "requiredSkills": "Flutter, Spring Boot, PostgreSQL"
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "id": 10,
+  "title": "Aplikasi SkillBridge Mobile",
+  "description": "Membangun aplikasi platform kolaborasi mahasiswa.",
+  "category": "LOMBA",
+  "status": "OPEN",
+  "maxMembers": 3,
+  "currentMemberCount": 1,
+  "pendingApplicationCount": 0,
+  "requiredSkills": "Flutter, Spring Boot, PostgreSQL",
+  "createdByUserId": 1,
+  "createdByName": "Budi Santoso",
+  "hasApplied": false,
+  "isOwner": true,
+  "createdAt": "2026-07-24T21:45:00"
 }
 ```
 
-### `GET /api/projects/my`
-Mengambil seluruh proyek yang dibuat oleh pengguna saat ini.
+#### 2. Browse Seluruh Proyek Open
+* **Endpoint:** `GET /api/projects?q=Mobile&page=0&size=20`
+* **Keamanan:** Authenticated
+* **Response (200 OK):** Object Page Spring Data (`content`, `totalPages`, `totalElements`, dll.).
 
-### `GET /api/projects/{id}`
-Melihat detail satu proyek.
+#### 3. Proyek Saya (Sebagai Ketua)
+* **Endpoint:** `GET /api/projects/my`
+* **Keamanan:** Authenticated
+* **Response (200 OK):** Array dari `ProjectResponse`.
 
-### `PUT /api/projects/{id}`
-Memperbarui proyek (hanya ketua tim).
+#### 4. Detail Satu Proyek
+* **Endpoint:** `GET /api/projects/{id}`
+* **Keamanan:** Authenticated
 
-### `DELETE /api/projects/{id}`
-Soft delete proyek (hanya ketua tim). Respons `204 No Content`.
+#### 5. Update Proyek
+* **Endpoint:** `PUT /api/projects/{id}`
+* **Keamanan:** Authenticated (Hanya Ketua Tim)
 
-### `POST /api/projects/{id}/apply`
-Melamar ke proyek.
+#### 6. Hapus Proyek (Soft-Delete)
+* **Endpoint:** `DELETE /api/projects/{id}`
+* **Keamanan:** Authenticated (Hanya Ketua Tim)
+* **Response (204 No Content)**
 
+#### 7. Melamar ke Proyek
+* **Endpoint:** `POST /api/projects/{id}/apply`
+* **Keamanan:** Authenticated
+* **Request Body:**
 ```json
 {
   "positionApplied": "Frontend Developer",
-  "message": "Saya ingin bergabung."
+  "message": "Saya ahli Flutter dan berminat bergabung."
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "id": 5,
+  "projectId": 10,
+  "projectTitle": "Aplikasi SkillBridge Mobile",
+  "applicantId": 2,
+  "applicantName": "Siti Rahma",
+  "applicantNim": "220101002",
+  "positionApplied": "Frontend Developer",
+  "message": "Saya ahli Flutter dan berminat bergabung.",
+  "status": "PENDING",
+  "createdAt": "2026-07-24T21:46:00"
 }
 ```
 
-### `GET /api/projects/{id}/applications`
-Melihat daftar lamaran proyek (hanya ketua tim).
+#### 8. Lihat Lamaran Masuk (Ketua Tim)
+* **Endpoint:** `GET /api/projects/{id}/applications`
+* **Keamanan:** Authenticated (Hanya Ketua Tim)
 
-### `PUT /api/projects/{id}/applications/{appId}/accept`
-Menerima lamaran. Pelamar otomatis ditambahkan ke anggota tim. Jika jumlah anggota telah mencapai `maxMembers`, status proyek otomatis berubah menjadi `CLOSED`.
+#### 9. Terima Lamaran Pelamar
+* **Endpoint:** `PUT /api/projects/{id}/applications/{appId}/accept`
+* **Keamanan:** Authenticated (Hanya Ketua Tim)
+* **Efek Samping:** Status lamaran berubah `ACCEPTED`, pelamar otomatis ditambahkan ke tim. Jika kapasitas tim penuh, status proyek otomatis berubah menjadi `CLOSED`.
 
-### `PUT /api/projects/{id}/applications/{appId}/reject`
-Menolak lamaran.
+#### 10. Tolak Lamaran Pelamar
+* **Endpoint:** `PUT /api/projects/{id}/applications/{appId}/reject`
+* **Keamanan:** Authenticated (Hanya Ketua Tim)
 
-### `GET /api/projects/{id}/team`
-Melihat daftar anggota resmi tim proyek.
+#### 11. Lihat Lamaran Saya
+* **Endpoint:** `GET /api/projects/applications/my`
+* **Keamanan:** Authenticated
 
-### `GET /api/projects/applications/my`
-Melihat seluruh lamaran yang telah dikirim oleh pengguna saat ini.
-
----
-
-## 5. Pencocokan Kolaborasi (`/api/match`)
-
-- `GET /api/match/projects`: Mengambil proyek `OPEN` yang diurutkan berdasarkan skor kecocokan skill pengguna.
-- `GET /api/match/projects/{id}`: Menghitung skor kecocokan pengguna terhadap proyek tertentu.
-- `GET /api/match/collaborators?projectId={id}`: Mencari mahasiswa yang paling cocok untuk direkrut ke proyek.
-
----
-
-## 6. Permintaan Akses Kontak (`/api/contact-requests`)
-
-- `POST /api/contact-requests/{targetUserId}`: Mengirim permintaan akses kontak.
-- `GET /api/contact-requests/incoming`: Melihat permintaan kontak masuk berstatus `PENDING`.
-- `GET /api/contact-requests/outgoing`: Melihat seluruh permintaan kontak yang dikirim.
-- `PUT /api/contact-requests/{requestId}/approve`: Menyetujui permintaan kontak (otomatis membuka akses kontak).
-- `PUT /api/contact-requests/{requestId}/reject`: Menolak permintaan kontak.
-
----
-
-## 7. Pesan Langsung (`/api/messages`)
-
-- `POST /api/messages/{receiverId}`: Mengirim pesan langsung ke pengguna lain.
-  ```json
+#### 12. Lihat Anggota Resmi Tim Proyek
+* **Endpoint:** `GET /api/projects/{id}/team`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
+```json
+[
   {
-    "content": "Halo, apakah masih ada posisi untuk proyek ini?"
+    "id": 1,
+    "projectId": 10,
+    "userId": 1,
+    "userName": "Budi Santoso",
+    "userNim": "220101001",
+    "teamRole": "Ketua Tim",
+    "joinedAt": "2026-07-24T21:45:00"
+  },
+  {
+    "id": 2,
+    "projectId": 10,
+    "userId": 2,
+    "userName": "Siti Rahma",
+    "userNim": "220101002",
+    "teamRole": "Frontend Developer",
+    "joinedAt": "2026-07-24T21:47:00"
   }
-  ```
-- `GET /api/messages/conversations`: Mengambil daftar percakapan pengguna (ringkasan percakapan).
-- `GET /api/messages/conversations/{partnerId}`: Mengambil seluruh riwayat pesan dengan satu pengguna.
+]
+```
 
 ---
 
-## 8. Notifikasi (`/api/notifications`)
+### 5.4 Modul Permintaan Akses Kontak (`/api/contact-requests`)
 
-- `GET /api/notifications`: Mengambil seluruh notifikasi pengguna saat ini.
-- `GET /api/notifications/unread-count`: Mengambil jumlah notifikasi yang belum dibaca (`{"count": 3}`).
-- `PUT /api/notifications/{id}/read`: Menandai satu notifikasi sebagai dibaca.
-- `PUT /api/notifications/read-all`: Menandai seluruh notifikasi sebagai dibaca.
-- `DELETE /api/notifications/{id}`: Menghapus satu notifikasi. Respons `204 No Content`.
+#### 1. Kirim Permintaan Akses Kontak
+* **Endpoint:** `POST /api/contact-requests/{targetUserId}`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
+```json
+{
+  "id": 8,
+  "requesterId": 1,
+  "requesterName": "Budi Santoso",
+  "requesterNim": "220101001",
+  "targetId": 2,
+  "targetName": "Siti Rahma",
+  "status": "PENDING",
+  "createdAt": "2026-07-24T21:48:00"
+}
+```
+
+#### 2. Lihat Permintaan Masuk (Target)
+* **Endpoint:** `GET /api/contact-requests/incoming`
+* **Keamanan:** Authenticated
+
+#### 3. Lihat Permintaan Keluar (Requester)
+* **Endpoint:** `GET /api/contact-requests/outgoing`
+* **Keamanan:** Authenticated
+
+#### 4. Setujui Permintaan Kontak
+* **Endpoint:** `PUT /api/contact-requests/{requestId}/approve`
+* **Keamanan:** Authenticated (Hanya Target)
+
+#### 5. Tolak Permintaan Kontak
+* **Endpoint:** `PUT /api/contact-requests/{requestId}/reject`
+* **Keamanan:** Authenticated (Hanya Target)
 
 ---
 
-## 9. Admin Dashboard (`/api/admin`) *(Hanya Role ADMIN)*
+### 5.5 Modul Sistem Pencocokan / Matching (`/api/match`)
 
-- `GET /api/admin/stats`: Statistik menyeluruh platform (pengguna, proyek, lamaran, pesan, notifikasi).
-- `GET /api/admin/users`: Daftar seluruh mahasiswa dengan filter keyword & status verifikasi (`?keyword=salman&isVerified=true&page=0&size=20`).
-- `GET /api/admin/users/{id}`: Detail lengkap mahasiswa beserta profilnya.
-- `PUT /api/admin/users/{id}/verify`: Memverifikasi atau mencabut verifikasi mahasiswa.
-  ```json
+#### 1. Proyek Paling Cocok Untuk Saya
+* **Endpoint:** `GET /api/match/projects`
+* **Keamanan:** Authenticated
+* **Response (200 OK):**
+```json
+[
   {
-    "isVerified": true,
-    "reason": "Dokumen KTM valid"
+    "projectId": 10,
+    "title": "Aplikasi SkillBridge Mobile",
+    "category": "LOMBA",
+    "requiredSkills": ["Flutter", "Spring Boot", "PostgreSQL"],
+    "matchingSkills": ["Spring Boot", "PostgreSQL"],
+    "matchScore": 66.67,
+    "currentMembers": 2,
+    "maxMembers": 3
   }
-  ```
-- `GET /api/admin/projects`: Daftar proyek aktif untuk moderasi admin (`?keyword=pkm&page=0&size=20`).
-- `DELETE /api/admin/projects/{id}`: Moderasi/hapus proyek yang melanggar ketentuan.
-  ```json
-  {
-    "reason": "Proyek terindikasi spam"
-  }
-  ```
+]
+```
+
+#### 2. Score Matching Proyek Spesifik
+* **Endpoint:** `GET /api/match/projects/{id}`
+* **Keamanan:** Authenticated
+
+#### 3. Cari Rekan/Kolaborator Proyek
+* **Endpoint:** `GET /api/match/collaborators?projectId={id}`
+* **Keamanan:** Authenticated (Untuk Ketua Tim)
+
+---
+
+### 5.6 Modul Pesan & Obrolan (`/api/messages`)
+
+#### 1. Kirim Pesan
+* **Endpoint:** `POST /api/messages/{receiverId}`
+* **Keamanan:** Authenticated
+* **Request Body:**
+```json
+{
+  "content": "Halo Siti, senang bisa bekerja sama di tim ini!"
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "id": 100,
+  "senderId": 1,
+  "senderName": "Budi Santoso",
+  "receiverId": 2,
+  "receiverName": "Siti Rahma",
+  "content": "Halo Siti, senang bisa bekerja sama di tim ini!",
+  "isRead": false,
+  "createdAt": "2026-07-24T21:50:00"
+}
+```
+
+#### 2. Daftar Obrolan Active (`Conversations`)
+* **Endpoint:** `GET /api/messages/conversations`
+* **Keamanan:** Authenticated
+
+#### 3. Riwayat Chat dengan Pengguna
+* **Endpoint:** `GET /api/messages/conversations/{partnerId}`
+* **Keamanan:** Authenticated (Otomatis menandai pesan partner sebagai telah dibaca).
+
+---
+
+## 6. 🧪 Alur Pengujian MVP (Testing Flow Guide)
+
+Untuk menguji seluruh alur kerja sistem backend MVP secara berurutan menggunakan Postman / HTTP Client:
+
+```mermaid
+graph TD
+    A[1. Register User 1 & User 2] --> B[2. Login User 1 & Dapatkan Token JWT]
+    B --> C[3. Update Profil & Skill User 1]
+    C --> D[4. Buat Proyek Baru oleh User 1]
+    D --> E[5. Login User 2 & Melamar ke Proyek User 1]
+    E --> F[6. User 1 Terima Lamaran User 2]
+    F --> G[7. User 2 Bergabung ke Tim Proyek]
+    G --> H[8. Kirim Pesan Chat & Request Akses Kontak]
+```
+
+1. **Registrasi 2 Akun:** Panggil `POST /api/auth/register` untuk **User 1 (Budi)** dan **User 2 (Siti)**.
+2. **Login User 1:** Panggil `POST /api/auth/login` dengan kredensial User 1 untuk mengambil Token JWT. Simpan token ini.
+3. **Lengkapi Profil User 1:** Set token pada header `Authorization: Bearer <TOKEN>`, lalu panggil `PUT /api/profile/me` dan `POST /api/profile/me/skills`.
+4. **Buat Proyek:** Panggil `POST /api/projects` untuk membuat proyek rekrutmen.
+5. **Login & Melamar (User 2):** Login sebagai User 2, ambil tokennya, lalu panggil `POST /api/projects/{id}/apply` ke proyek User 1.
+6. **Proses Lamaran (User 1):** Gunakan kembali token User 1, panggil `PUT /api/projects/{id}/applications/{appId}/accept`.
+7. **Verifikasi Tim & Chat:** Panggil `GET /api/projects/{id}/team` untuk memverifikasi User 2 telah resmi bergabung dalam tim, lalu panggil `POST /api/messages/{user2_id}` untuk saling berkirim pesan.
