@@ -1,35 +1,16 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+    baseURL: 'http://localhost:8080/api', // Sesuaikan dengan endpoint controller Spring Boot-mu
 });
 
-// Interceptor untuk menambahkan token otomatis
+// Menambahkan token JWT otomatis ke setiap request (jika sudah login)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
-
-// Jika token tidak valid
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-
-    return Promise.reject(error);
-  }
-);
+    return config;
+});
 
 export default api;

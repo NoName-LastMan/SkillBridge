@@ -301,20 +301,5 @@ public class AdminDashboardService {
         return projects.stream().map(this::buildProjectSummary).collect(Collectors.toList());
     }
 
-    private PlatformStatsResponse.ProjectSummary buildProjectSummary(Project p) {
-        User owner = p.getCreatedBy();
-        Profile ownerProfile = profileRepository.findByUserId(owner.getId()).orElse(null);
-        String ownerNama = (ownerProfile != null && ownerProfile.getNamaLengkap() != null)
-                ? ownerProfile.getNamaLengkap()
-                : owner.getEmail();
 
-        return new PlatformStatsResponse.ProjectSummary(
-                p.getId(),
-                p.getTitle(),
-                p.getStatus().name(),
-                p.getCategory().name(),
-                owner.getEmail(),
-                ownerNama
-        );
-    }
 }

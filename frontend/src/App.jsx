@@ -1,36 +1,19 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import LoginView from './auth/LoginView';
+import RegisterView from './auth/RegisterView';
+import DashboardView from './projects/DashboardView';
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import Projects from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
-
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-
-        {/* Halaman utama */}
-        <Route path="/" element={<Login />} />
-
-        {/* Auth */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        {/* Fitur */}
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-
-        {/* Route cadangan */}
-        <Route path="*" element={<Login />} />
-
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<LoginView />} />
+        <Route path="/register" element={<RegisterView />} />
+        <Route path="/dashboard" element={<DashboardView />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;

@@ -22,7 +22,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     Page<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status, Pageable pageable);
     List<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status);
 
-    List<Project> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(ProjectStatus status);
 
     // Proyek berdasarkan kategori dan status
     List<Project> findByCategoryAndStatusOrderByCreatedAtDesc(ProjectCategory category, ProjectStatus status);
