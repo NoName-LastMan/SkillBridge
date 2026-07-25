@@ -1,10 +1,14 @@
 import axios from 'axios';
 
+// Konfigurasi dasar Axios sesuai dokumentasi API
 const api = axios.create({
-    baseURL: 'http://localhost:8080/api', // Sesuaikan dengan endpoint controller Spring Boot-mu
+    baseURL: 'http://localhost:8080/api', 
+    headers: {
+        'Content-Type': 'application/json'
+    }
 });
 
-// Menambahkan token JWT otomatis ke setiap request (jika sudah login)
+// Otomatis menyisipkan JWT Token jika user sudah login
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
