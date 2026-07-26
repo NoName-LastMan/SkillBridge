@@ -31,20 +31,30 @@ export default function RegisterView() {
         setLoading(true);
 
         try {
-            // Menyiapkan payload bersih sesuai dokumentasi API (tanpa confirmPassword)
             const payload = {
                 email: formData.email,
                 password: formData.password,
                 role: formData.role
             };
 
+            // 1. Kirim data registrasi ke backend
             await api.post('/auth/register', payload);
             
-            alert('Registrasi berhasil! Silakan login menggunakan akun baru Anda.');
-            navigate('/login');
+            // 2. TANPA PINDAH HALAMAN, langsung tembak API Login secara rahasia
+            const loginResponse = await api.post('/auth/login', {
+                email: formData.email,
+                password: formData.password
+            });
+            
+            // 3. Tangkap token JWT dan simpan ke Local Storage
+            localStorage.setItem('token', loginResponse.data.token);
+            
+            // 4. Langsung lemparkan user ke Dashboard
+            alert('Registrasi berhasil! Selamat datang di SkillBridge.');
+            navigate('/dashboard');
+            
         } catch (err) {
-            // Menangkap pesan error dari backend atau menampilkan fallback
-            const errorMsg = err.response?.data?.message || 'Pendaftaran gagal. Periksa kembali email kampus atau koneksi server.';
+            const errorMsg = err.response?.data?.message || 'Pendaftaran gagal. Periksa kembali datamu.';
             setError(errorMsg);
         } finally {
             setLoading(false);

@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import api from "../services/api";
 
-// Tambahkan import ini
 import SearchBar from "./SearchBar";
 import FilterBar from "./FilterBar";
 import ProjectList from "./ProjectList";
@@ -11,39 +10,50 @@ import ProjectList from "./ProjectList";
 export default function DashboardView() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 1. Tambahan state untuk menyimpan ketikan pencarian dan pilihan kategori
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("ALL"); 
 
   useEffect(() => {
     const fetchProjects = async () => {
+      setLoading(true);
       try {
-        const response = await api.get("/projects");
-        setProjects(response.data);
+        // 2. Mengirim parameter pencarian (q) ke backend sesuai dokumentasi API
+        const response = await api.get("/projects", {
+            params: {
+                q: searchQuery !== "" ? searchQuery : undefined,
+                page: 0,
+                size: 20
+            }
+        });
+        
+        // 3. PERBAIKAN: Mengambil array dari response.data.content (karena backend menggunakan sistem Pagination)
+        setProjects(response.data.content || []); 
       } catch (error) {
-        console.error("Gagal mengambil data proyek:", error);
+        console.error("Gagal mengambil data proyek, menggunakan dummy data:", error);
 
-        // Dummy data jika backend belum siap
+        // 4. PERBAIKAN: Properti dummy disesuaikan dengan JSON dari dokumentasi API asli (title, description, category)
         setProjects([
           {
             id: 1,
-            judul_proyek: "Tim PKM-K Kewirausahaan Digital",
-            kategori: "PKM",
-            deskripsi:
-              "Mencari UI/UX Designer untuk aplikasi marketplace mahasiswa.",
+            title: "Tim PKM-K Kewirausahaan Digital",
+            category: "PKM",
+            description: "Mencari UI/UX Designer untuk aplikasi marketplace mahasiswa.",
             status: "OPEN",
           },
           {
             id: 2,
-            judul_proyek: "Lomba Gemastik Data Mining",
-            kategori: "LOMBA",
-            deskripsi:
-              "Butuh anggota yang menguasai Python dan Machine Learning.",
+            title: "Lomba Gemastik Data Mining",
+            category: "LOMBA",
+            description: "Butuh anggota yang menguasai Python dan Machine Learning.",
             status: "OPEN",
           },
           {
             id: 3,
-            judul_proyek: "IoT Smart Farming",
-            kategori: "RISET",
-            deskripsi:
-              "Mencari programmer Arduino dan Flutter untuk monitoring pertanian.",
+            title: "IoT Smart Farming",
+            category: "PENELITIAN",
+            description: "Mencari programmer Arduino dan Flutter untuk monitoring pertanian.",
             status: "OPEN",
           },
         ]);
@@ -52,14 +62,23 @@ export default function DashboardView() {
       }
     };
 
+    // Efek ini akan dipanggil ulang setiap kali searchQuery berubah
+    // (Bisa ditambahkan teknik 'debounce' nanti agar tidak memberatkan server)
     fetchProjects();
-  }, []);
+  }, [searchQuery]);
 
   const handleJoin = (projectId) => {
+    // Nantinya diarahkan ke POST /api/projects/{id}/apply
     alert(
       `Request Join untuk proyek ID: ${projectId} berhasil dikirim!\nMenunggu konfirmasi Ketua Tim.`
     );
   };
+
+  // 5. Logika filter lokal (untuk menyortir data yang sudah diambil berdasarkan kategori Enum)
+  const filteredProjects = projects.filter((project) => {
+    if (filter === "ALL") return true;
+    return project.category === filter;
+  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -72,7 +91,6 @@ export default function DashboardView() {
             <h1 className="text-3xl font-bold text-gray-800">
               SkillBridge Dashboard
             </h1>
-
             <p className="text-gray-500 mt-2">
               Temukan tim, kolaborator, dan proyek sesuai kemampuanmu.
             </p>
@@ -86,24 +104,29 @@ export default function DashboardView() {
           </Link>
         </div>
 
-        {/* Search */}
+        {/* 6. PERBAIKAN: Mengirim state sebagai props ke komponen anak */}
         <div className="mb-4">
-          <SearchBar />
+          <SearchBar 
+             value={searchQuery} 
+             onSearch={(value) => setSearchQuery(value)} 
+          />
         </div>
 
-        {/* Filter */}
         <div className="mb-8">
-          <FilterBar />
+          <FilterBar 
+             activeFilter={filter} 
+             onFilterChange={(value) => setFilter(value)} 
+          />
         </div>
 
-        {/* Loading */}
+        {/* Loading & Menampilkan data yang sudah difilter */}
         {loading ? (
           <p className="text-center text-gray-500">
             Memuat data proyek...
           </p>
         ) : (
           <ProjectList
-            projects={projects}
+            projects={filteredProjects}
             onJoin={handleJoin}
           />
         )}

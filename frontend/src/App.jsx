@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
+import ProtectedRoute from "./components/ProtectedRoute";
 import LoginView from "./auth/LoginView";
 import RegisterView from "./auth/RegisterView";
 
@@ -14,47 +15,52 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Rute Publik (Tidak perlu login) */}
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<LoginView />} />
+        <Route path="/register" element={<RegisterView />} />
 
-        <Route
-          path="/"
-          element={<Navigate to="/login" />}
+        {/* Rute Privat (Wajib login) */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DashboardView />
+            </ProtectedRoute>
+          } 
         />
-
-        <Route
-          path="/login"
-          element={<LoginView />}
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <ProfileView />
+            </ProtectedRoute>
+          } 
         />
-
-        <Route
-          path="/register"
-          element={<RegisterView />}
+        <Route 
+          path="/projects/create" 
+          element={
+            <ProtectedRoute>
+              <CreateProjectView />
+            </ProtectedRoute>
+          } 
         />
-
-        <Route
-          path="/dashboard"
-          element={<DashboardView />}
+        <Route 
+          path="/projects/:id" 
+          element={
+            <ProtectedRoute>
+              <ProjectDetailView />
+            </ProtectedRoute>
+          } 
         />
-
-        <Route
-          path="/profile"
-          element={<ProfileView />}
+        <Route 
+          path="/my-projects" 
+          element={
+            <ProtectedRoute>
+              <MyProjectView />
+            </ProtectedRoute>
+          } 
         />
-
-        <Route
-          path="/projects/create"
-          element={<CreateProjectView />}
-        />
-
-        <Route
-          path="/projects/:id"
-          element={<ProjectDetailView />}
-        />
-
-        <Route
-          path="/my-projects"
-          element={<MyProjectView />}
-        />
-
       </Routes>
     </Router>
   );
