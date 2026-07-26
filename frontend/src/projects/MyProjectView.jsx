@@ -5,6 +5,7 @@ import ProjectCard from "./ProjectCard";
 import SearchBar from "./SearchBar";
 import FilterBar from "./FilterBar";
 import api from "../services/api";
+import ManageApplicantsModal from "./ManageApplicantsModal"; // Sesuaikan path-nya
 
 export default function MyProjectView() {
   const [projects, setProjects] = useState([]);
@@ -14,6 +15,8 @@ export default function MyProjectView() {
   // State untuk pencarian dan filter
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
+  // ... state yang lain ...
+  const [manageProjectId, setManageProjectId] = useState(null);
 
   useEffect(() => {
     const fetchMyProjects = async () => {
@@ -41,9 +44,8 @@ export default function MyProjectView() {
   }, [searchQuery]); // Akan memanggil ulang API jika kata kunci pencarian berubah
 
   const handleAction = (projectId) => {
-    // Karena ini proyek sendiri, tombolnya jadi fitur Kelola/Edit
-    alert(`Fitur kelola untuk proyek ID: ${projectId} akan segera datang!`);
-  };
+  setManageProjectId(projectId); // Membuka modal dengan ID proyek yang dipilih
+};
 
   // Filter lokal berdasarkan kategori (Enum)
   const filteredProjects = projects.filter((project) => {
@@ -115,8 +117,16 @@ export default function MyProjectView() {
               />
             ))}
           </div>
+          
         )}
-      </main>
-    </div>
+      {/* Tambahkan ini di bagian paling bawah struktur HTML, tepat sebelum </div> utama ditutup */}
+      {manageProjectId && (
+        <ManageApplicantsModal 
+          projectId={manageProjectId} 
+          onClose={() => setManageProjectId(null)} 
+        />
+      )}
+    </main>
+  </div>
   );
 }
