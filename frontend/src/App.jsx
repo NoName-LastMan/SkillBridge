@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import HomeView from './auth/HomeView';
 import LoginView from "./auth/LoginView";
 import RegisterView from "./auth/RegisterView";
 
@@ -16,7 +17,7 @@ function App() {
     <Router>
       <Routes>
         {/* Rute Publik (Tidak perlu login) */}
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/" element={<HomeView />} />
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
 

@@ -4,10 +4,16 @@ import api from '../services/api';
 
 export default function RegisterView() {
     const [formData, setFormData] = useState({
+        // Data Wajib (Autentikasi)
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'MAHASISWA' // Sesuai dengan Enum Role API
+        role: 'MAHASISWA',
+        
+        // Data Profil Tambahan
+        namaLengkap: '',
+        nim: '',
+        prodi: ''
     });
     
     const [loading, setLoading] = useState(false);
@@ -22,7 +28,6 @@ export default function RegisterView() {
         e.preventDefault();
         setError('');
 
-        // Validasi sederhana: pastikan password dan konfirmasi password sama
         if (formData.password !== formData.confirmPassword) {
             setError('Password dan Konfirmasi Password tidak cocok!');
             return;
@@ -31,30 +36,45 @@ export default function RegisterView() {
         setLoading(true);
 
         try {
-            const payload = {
+            // LANGKAH 1: Daftarkan Akun (Hanya data Auth)
+            await api.post('/auth/register', {
                 email: formData.email,
                 password: formData.password,
                 role: formData.role
-            };
-
-            // 1. Kirim data registrasi ke backend
-            await api.post('/auth/register', payload);
+            });
             
-            // 2. TANPA PINDAH HALAMAN, langsung tembak API Login secara rahasia
+            // LANGKAH 2: Langsung Login untuk mendapatkan Token
             const loginResponse = await api.post('/auth/login', {
                 email: formData.email,
                 password: formData.password
             });
             
-            // 3. Tangkap token JWT dan simpan ke Local Storage
-            localStorage.setItem('token', loginResponse.data.token);
+            const token = loginResponse.data.token;
+            localStorage.setItem('token', token); // Simpan token agar axios interceptor bisa memakainya
             
-            // 4. Langsung lemparkan user ke Dashboard
-            alert('Registrasi berhasil! Selamat datang di SkillBridge.');
+            // LANGKAH 3: Jika user mengisi nama, otomatis update profilnya!
+            if (formData.namaLengkap.trim() !== '') {
+                try {
+                    // Endpoint untuk update profil (membutuhkan Auth)
+                    await api.put('/profile/me', {
+                        namaLengkap: formData.namaLengkap,
+                        nim: formData.nim,
+                        prodi: formData.prodi
+                    }, {
+                        // Memastikan token terkirim khusus untuk request ini
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                } catch (profileErr) {
+                    console.warn("Registrasi berhasil, tapi gagal menyimpan data profil awal:", profileErr);
+                    // Kita biarkan saja, karena akun utamanya sudah berhasil dibuat
+                }
+            }
+            
+            alert('Registrasi berhasil! Selamat datang di tim.');
             navigate('/dashboard');
             
         } catch (err) {
-            const errorMsg = err.response?.data?.message || 'Pendaftaran gagal. Periksa kembali datamu.';
+            const errorMsg = err.response?.data?.message || 'Pendaftaran gagal. Periksa kembali datamu atau pastikan email belum terdaftar.';
             setError(errorMsg);
         } finally {
             setLoading(false);
@@ -62,72 +82,124 @@ export default function RegisterView() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 py-10">
+            <div className="w-full max-w-lg p-8 space-y-6 bg-white rounded-xl shadow-md">
                 <div>
-                    <h2 className="text-2xl font-bold text-center text-blue-600">Daftar Akun SkillBridge</h2>
-                    <p className="text-sm text-center text-gray-500 mt-1">Platform Kolaborasi & Pertukaran Skill Mahasiswa</p>
+                    <h2 className="text-2xl font-bold text-center text-blue-600">Daftar SkillBridge</h2>
+                    <p className="text-sm text-center text-gray-500 mt-1">Platform Kolaborasi Mahasiswa</p>
                 </div>
                 
                 {error && (
-                    <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md text-center">
+                    <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md text-center border border-red-200">
                         {error}
                     </div>
                 )}
                 
-                <form onSubmit={handleRegister} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email Kampus</label>
-                        <input 
-                            name="email" 
-                            type="email" 
-                            required 
-                            value={formData.email}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            placeholder="nama@student.unimus.ac.id" 
-                        />
-                    </div>
+                <form onSubmit={handleRegister} className="space-y-6">
                     
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input 
-                            name="password" 
-                            type="password" 
-                            required 
-                            value={formData.password}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            placeholder="Minimal 6-8 karakter" 
-                        />
+                    {/* --- BAGIAN 1: INFORMASI AKUN (WAJIB) --- */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b pb-2">1. Informasi Akun</h3>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Email Kampus <span className="text-red-500">*</span></label>
+                            <input 
+                                name="email" 
+                                type="email" 
+                                required 
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                placeholder="nama@student.unimus.ac.id" 
+                            />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Password <span className="text-red-500">*</span></label>
+                                <input 
+                                    name="password" 
+                                    type="password" 
+                                    required 
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                    placeholder="Minimal 6 karakter" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Ulangi Password <span className="text-red-500">*</span></label>
+                                <input 
+                                    name="confirmPassword" 
+                                    type="password" 
+                                    required 
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                    placeholder="Ulangi password" 
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Konfirmasi Password</label>
-                        <input 
-                            name="confirmPassword" 
-                            type="password" 
-                            required 
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            placeholder="Ulangi password" 
-                        />
+                    {/* --- BAGIAN 2: INFORMASI PROFIL (OPSIONAL/BISA DI-SKIP) --- */}
+                    <div className="space-y-4 pt-2">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">2. Data Diri</h3>
+                            <span className="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded">-----</span>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                            <input 
+                                name="namaLengkap" 
+                                type="text" 
+                                value={formData.namaLengkap}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 mt-1 border border-gray-200 bg-gray-50 rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition" 
+                                placeholder="Contoh: Budi Santoso" 
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">NIM</label>
+                                <input 
+                                    name="nim" 
+                                    type="text" 
+                                    value={formData.nim}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 mt-1 border border-gray-200 bg-gray-50 rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition" 
+                                    placeholder="Nomor Induk Mahasiswa" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Program Studi</label>
+                                <input 
+                                    name="prodi" 
+                                    type="text" 
+                                    value={formData.prodi}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 mt-1 border border-gray-200 bg-gray-50 rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition" 
+                                    placeholder="Contoh: Teknik Informatika" 
+                                />
+                            </div>
+                        </div>
                     </div>
                     
                     <button 
                         type="submit" 
                         disabled={loading}
-                        className={`w-full px-4 py-2 text-white rounded-md font-medium transition ${
-                            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                        className={`w-full px-4 py-3 text-white rounded-lg font-bold text-lg transition shadow-md mt-4 ${
+                            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                         }`}
                     >
-                        {loading ? 'Memproses pendaftaran...' : 'Buat Akun'}
+                        {loading ? 'Memproses Pendaftaran...' : 'Buat Akun Sekarang'}
                     </button>
                 </form>
                 
                 <p className="text-sm text-center text-gray-600">
-                    Sudah punya akun? <Link to="/login" className="text-blue-600 hover:underline font-medium">Login di sini</Link>
+                    Sudah punya akun? <Link to="/login" className="text-blue-600 hover:underline font-bold">Login di sini</Link>
                 </p>
             </div>
         </div>
