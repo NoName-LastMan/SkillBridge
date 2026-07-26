@@ -1,44 +1,57 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
 
-export default function ManageApplicantsModal({ projectId, onClose }) {
+export default function ManageApplicantsModal({ projectId, onClose, onStatusUpdated }) {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchApplicants = async () => {
-      try {
-        // Endpoint asumsi: Mengambil daftar pelamar berdasarkan ID proyek
-        const response = await api.get(`/projects/${projectId}/applications`);
-        const data = response.data.content || response.data || [];
-        setApplicants(data);
-      } catch (err) {
-        console.error("Gagal mengambil data pendaftar:", err);
-        setError("Gagal memuat data pendaftar.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchApplicants = async () => {
+    try {
+      // Endpoint API 5.3: GET /api/projects/{id}/applications
+      const response = await api.get(`/projects/${projectId}/applications`);
+      const data = response.data.content || response.data || [];
+      setApplicants(data);
+    } catch (err) {
+      console.error("Gagal mengambil data pendaftar:", err);
+      setError("Gagal memuat data pendaftar.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchApplicants();
   }, [projectId]);
 
-  const handleUpdateStatus = async (applicationId, status) => {
+  const handleAccept = async (appId) => {
     try {
-      // Endpoint asumsi: Mengupdate status aplikasi (ACCEPTED / REJECTED)
-      // Sesuaikan payload JSON dengan apa yang diminta backend (misal huruf besar semua)
-      await api.put(`/applications/${applicationId}/status`, { status: status });
+      // Endpoint API 5.3: PUT /api/projects/{id}/applications/{appId}/accept
+      await api.put(`/projects/${projectId}/applications/${appId}/accept`);
+      alert("Pendaftar berhasil DITERIMA menjadi Anggota Tim! 🎉");
       
-      alert(`Pendaftar berhasil di-${status === 'ACCEPTED' ? 'terima' : 'tolak'}!`);
+      // Refresh data lokal di modal
+      fetchApplicants();
       
-      // Update UI secara lokal agar tidak perlu refresh halaman
-      setApplicants((prev) => 
-        prev.map((app) => app.id === applicationId ? { ...app, status: status } : app)
-      );
+      // Beritahu parent (MyProjectView) untuk merefresh statistik angka tim
+      if (onStatusUpdated) onStatusUpdated();
     } catch (err) {
-      console.error("Gagal mengubah status:", err);
-      alert(err.response?.data?.message || "Gagal mengubah status pendaftar.");
+      console.error("Gagal menerima pendaftar:", err);
+      alert(err.response?.data?.message || "Gagal menerima pendaftar.");
+    }
+  };
+
+  const handleReject = async (appId) => {
+    try {
+      // Endpoint API 5.3: PUT /api/projects/{id}/applications/{appId}/reject
+      await api.put(`/projects/${projectId}/applications/${appId}/reject`);
+      alert("Pendaftar telah ditolak.");
+      
+      fetchApplicants();
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err) {
+      console.error("Gagal menolak pendaftar:", err);
+      alert(err.response?.data?.message || "Gagal menolak pendaftar.");
     }
   };
 
@@ -48,8 +61,11 @@ export default function ManageApplicantsModal({ projectId, onClose }) {
         
         {/* Header Modal */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">Kelola Pendaftar</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-500 font-bold text-xl">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Kelola Pelamar & Anggota</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Setujui pelamar untuk memasukkan mereka ke dalam tim proyekmu.</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-red-500 font-bold text-2xl">
             &times;
           </button>
         </div>
@@ -57,38 +73,72 @@ export default function ManageApplicantsModal({ projectId, onClose }) {
         {/* Isi Modal */}
         <div className="p-6 overflow-y-auto flex-grow">
           {loading ? (
-            <p className="text-center text-gray-500">Memuat pendaftar...</p>
+            <p className="text-center text-gray-500 py-4">Memuat daftar pelamar...</p>
           ) : error ? (
-            <p className="text-center text-red-500 font-medium">{error}</p>
+            <p className="text-center text-red-500 font-medium py-4">{error}</p>
           ) : applicants.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">Belum ada mahasiswa yang mendaftar ke proyek ini.</p>
+              <p className="text-gray-500">Belum ada mahasiswa yang melamar ke proyek ini.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {applicants.map((app) => (
-                <div key={app.id} className="border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    {/* Asumsi backend mengirimkan data user di dalam object app.user */}
-                    <h3 className="font-bold text-gray-800">{app.user?.namaLengkap || app.user?.email || "Mahasiswa"}</h3>
-                    <p className="text-sm text-gray-500 mb-1">Status saat ini: <strong className="text-gray-700">{app.status}</strong></p>
-                    {app.message && <p className="text-sm text-gray-600 italic">"{app.message}"</p>}
+                <div 
+                  key={app.id} 
+                  className={`border rounded-xl p-4 transition ${
+                    app.status === 'ACCEPTED' 
+                      ? 'border-green-300 bg-green-50/30' 
+                      : 'border-gray-200 hover:border-blue-200'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-gray-800">
+                          {app.applicantName || "Mahasiswa"}
+                        </h3>
+                        {app.status === 'ACCEPTED' && (
+                          <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                            ANGGOTA TIM
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                        Posisi: {app.positionApplied || "-"}
+                      </p>
+                    </div>
+
+                    {/* Status Badge */}
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      app.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                      app.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {app.status === 'ACCEPTED' ? 'DITERIMA' : app.status === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU'}
+                    </span>
                   </div>
 
-                  {/* Tombol Aksi (Sembunyikan jika sudah diterima/ditolak) */}
+                  {/* Pesan Pelamar */}
+                  {app.message && (
+                    <div className="bg-white p-3 rounded-lg text-sm text-gray-600 my-3 border border-gray-100">
+                      <p className="italic">"{app.message}"</p>
+                    </div>
+                  )}
+
+                  {/* Tombol Aksi (Hanya muncul jika status masih PENDING) */}
                   {app.status === 'PENDING' && (
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
                       <button 
-                        onClick={() => handleUpdateStatus(app.id, 'ACCEPTED')}
-                        className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-                      >
-                        Terima
-                      </button>
-                      <button 
-                        onClick={() => handleUpdateStatus(app.id, 'REJECTED')}
-                        className="flex-1 sm:flex-none bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                        onClick={() => handleReject(app.id)}
+                        className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-semibold transition"
                       >
                         Tolak
+                      </button>
+                      <button 
+                        onClick={() => handleAccept(app.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm"
+                      >
+                        Terima Ke Tim
                       </button>
                     </div>
                   )}
@@ -97,7 +147,7 @@ export default function ManageApplicantsModal({ projectId, onClose }) {
             </div>
           )}
         </div>
-        
+
       </div>
     </div>
   );
