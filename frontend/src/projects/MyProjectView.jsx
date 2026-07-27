@@ -5,6 +5,7 @@ import SearchBar from "./SearchBar";
 import FilterBar from "./FilterBar";
 import api from "../services/api";
 import ManageApplicantsModal from "./ManageApplicantsModal";
+import { Edit, Trash2 } from "lucide-react"; // Ditambahkan ikon Edit & Hapus
 
 export default function MyProjectView() {
   const [myProjects, setMyProjects] = useState([]);
@@ -34,7 +35,6 @@ export default function MyProjectView() {
 
   const fetchMyApplications = async () => {
     try {
-      // Sesuai Dokumentasi API 5.3 Poin 11
       const response = await api.get("/projects/applications/my");
       setMyApplications(response.data.content || response.data || []);
     } catch (err) {
@@ -55,7 +55,18 @@ export default function MyProjectView() {
     return project.category === filter;
   });
 
-  // Fungsi Dummy untuk membuka Grup WA Pendaftar
+  const handleDelete = async (id) => {
+    if (window.confirm("Apakah kamu yakin ingin menghapus proyek ini?")) {
+      try {
+        await api.delete(`/projects/${id}`);
+        alert("Proyek berhasil dihapus!");
+        setMyProjects(myProjects.filter(p => p.id !== id));
+      } catch (error) {
+        alert("Gagal menghapus proyek.");
+      }
+    }
+  };
+
   const handleOpenWhatsApp = () => {
     window.open("https://chat.whatsapp.com/GrupDummyMVP", "_blank");
   };
@@ -105,9 +116,28 @@ export default function MyProjectView() {
                   <div className="p-6 flex-grow flex flex-col">
                     <div className="flex justify-between items-start mb-4">
                       <span className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">{project.category}</span>
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${project.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {project.status || 'OPEN'}
-                      </span>
+                      
+                      {/* TOMBOL EDIT & HAPUS DI KARTU PROYEK */}
+                      <div className="flex items-center gap-1.5">
+                        <Link 
+                          to={`/projects/edit/${project.id}`} 
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Proyek"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                        <button 
+                          onClick={() => handleDelete(project.id)} 
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Hapus Proyek"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ml-1 ${project.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {project.status || 'OPEN'}
+                        </span>
+                      </div>
+
                     </div>
                     <h2 className="text-xl font-bold mb-2 text-gray-800 line-clamp-2">{project.title}</h2>
                     <p className="text-gray-500 text-sm mb-6 line-clamp-2 flex-grow">{project.description}</p>
@@ -167,7 +197,6 @@ export default function MyProjectView() {
                 <div key={app.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4 hover:shadow-md transition">
                   <div className="flex justify-between items-start">
                     <div>
-                      {/* Judul Proyek Sekarang Bisa Diklik untuk melihat detail! */}
                       <Link 
                         to={`/projects/${app.projectId}`} 
                         className="font-bold text-lg text-gray-800 hover:text-blue-600 transition"
@@ -186,7 +215,6 @@ export default function MyProjectView() {
                     </span>
                   </div>
 
-                  {/* Panel Ekstra: Hanya Muncul Jika Status DITERIMA */}
                   {app.status === 'ACCEPTED' && (
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
                       <p className="text-sm text-green-800 font-medium text-center sm:text-left">
@@ -207,7 +235,6 @@ export default function MyProjectView() {
           )}
         </section>
 
-        {/* Modal dengan Delay Timer agar Backend Selesai Update */}
         {manageProjectId && (
           <ManageApplicantsModal 
             projectId={manageProjectId} 
@@ -215,7 +242,7 @@ export default function MyProjectView() {
             onStatusUpdated={() => {
               setTimeout(() => {
                 fetchMyProjects();
-                fetchMyApplications(); // Sekalian refresh status lamaran siapa tahu butuh
+                fetchMyApplications();
               }, 500);
             }}
           />

@@ -4,8 +4,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import HomeView from './auth/HomeView';
 import LoginView from "./auth/LoginView";
 import RegisterView from "./auth/RegisterView";
+import EditProjectView from "./projects/EditProjectView";
 
 import ProfileView from "./profile/ProfileView";
+import PublicProfileView from './profile/PublicProfileView'; // Pastikan path-nya benar
 
 import DashboardView from "./projects/DashboardView";
 import CreateProjectView from "./projects/CreateProjectView";
@@ -16,12 +18,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Rute Publik (Tidak perlu login) */}
+        {/* =====================================
+            Rute Publik (Tidak perlu login) 
+            ===================================== */}
         <Route path="/" element={<HomeView />} />
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
 
-        {/* Rute Privat (Wajib login) */}
+        {/* =====================================
+            Rute Privat (Wajib login) 
+            ===================================== */}
         <Route 
           path="/dashboard" 
           element={
@@ -30,6 +36,8 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Rute Edit Profil Sendiri */}
         <Route 
           path="/profile" 
           element={
@@ -38,6 +46,17 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Rute Lihat Profil Orang Lain */}
+        <Route 
+          path="/profile/:id" 
+          element={
+            <ProtectedRoute>
+              <PublicProfileView />
+            </ProtectedRoute>
+          } 
+        />
+
         <Route 
           path="/projects/create" 
           element={
@@ -46,6 +65,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
         <Route 
           path="/projects/:id" 
           element={
@@ -54,6 +74,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
         <Route 
           path="/my-projects" 
           element={
@@ -62,6 +83,15 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+  path="/projects/edit/:id" 
+  element={
+    <ProtectedRoute>
+      <EditProjectView />
+    </ProtectedRoute>
+  } 
+/>
+        
       </Routes>
     </Router>
   );
